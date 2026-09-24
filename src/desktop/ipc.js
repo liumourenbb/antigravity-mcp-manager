@@ -7,6 +7,7 @@ import { scanJetBrainsBridges, cleanStaleJetBrainsBridges } from '../core/jetbra
 import { listBackups, restoreBackup } from '../core/backup.js';
 import { PATHS, getDefaultWorkspaceDir, saveActiveWorkspace, getRecentWorkspaces } from '../core/paths.js';
 import { listAntigravityProjects, syncWorkspaceToAntigravity, initWorkspaceMcpConfig, getWorkspaceConfigFile } from '../core/workspaces.js';
+import { PRESET_RULES, loadRules, saveRules, appendPresetToRules, listModularRules, resolveRulesPath } from '../core/rules.js';
 
 /**
  * Registers workspace query and selection IPC handlers.
@@ -256,6 +257,58 @@ function registerSystemIpcHandlers() {
 }
 
 /**
+ * Registers IPC handlers for Antigravity rules management.
+ */
+function registerRulesIpcHandlers() {
+  ipcMain.handle('mcp:getRules', async (event, { scope = 'global', projectDir = null } = {}) => {
+    try {
+      return { ok: true, rules: loadRules(scope, projectDir) };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('mcp:saveRules', async (event, { scope = 'global', projectDir = null, content = '' } = {}) => {
+    try {
+      return { ok: true, result: saveRules(scope, projectDir, content) };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('mcp:getPresetRules', async () => ({
+    ok: true,
+    presets: PRESET_RULES
+  }));
+
+  ipcMain.handle('mcp:applyPresetRule', async (event, { scope = 'global', projectDir = null, presetId } = {}) => {
+    try {
+      return { ok: true, result: appendPresetToRules(scope, projectDir, presetId) };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('mcp:getModularRules', async (event, { scope = 'global', projectDir = null } = {}) => {
+    try {
+      return { ok: true, files: listModularRules(scope, projectDir) };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('mcp:openRulesFile', async (event, { scope = 'global', projectDir = null } = {}) => {
+    try {
+      const p = resolveRulesPath(scope, projectDir);
+      await shell.openPath(p);
+      return { ok: true, filePath: p };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
+}
+
+/**
  * Main entrance to register all IPC handlers.
  */
 export function registerIpcHandlers() {
@@ -264,4 +317,5 @@ export function registerIpcHandlers() {
   registerServerCrudIpcHandlers();
   registerDiagnosticsAndBackupIpcHandlers();
   registerSystemIpcHandlers();
+  registerRulesIpcHandlers();
 }

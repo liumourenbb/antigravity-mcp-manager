@@ -73,5 +73,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   await fetchServers();
   await fetchPresets();
   checkJetBrains();
+  if (window.RulesManager && typeof RulesManager.init === 'function') {
+    RulesManager.init();
+  }
   if (window.lucide) lucide.createIcons();
 });

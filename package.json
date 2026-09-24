@@ -13,7 +13,7 @@
     "start:desktop": "electron src/desktop/main.js",
     "ui": "node bin/cli.js ui",
     "cli": "node bin/cli.js",
-    "test": "node test/test.js",
+    "test": "node test/test.js && node test/test_rules.js && node test/scan_rule7.js",
     "build:win": "node scripts/build_windows11.js",
     "release": "node scripts/publish_release.js"
   },

@@ -144,5 +144,52 @@ const api = {
       return window.mcpApi.showWorkspaceConfigInFolder(dir);
     }
     return { ok: false, error: '当前环境不支持打开资源管理器' };
+  },
+
+  async getRules(scope, projectDir) {
+    if (window.mcpApi && window.mcpApi.getRules) {
+      return window.mcpApi.getRules(scope, projectDir);
+    }
+    const res = await fetch(`/api/rules?scope=${scope || 'global'}&projectDir=${encodeURIComponent(projectDir || '')}`);
+    return res.json();
+  },
+
+  async saveRules(scope, projectDir, content) {
+    if (window.mcpApi && window.mcpApi.saveRules) {
+      return window.mcpApi.saveRules(scope, projectDir, content);
+    }
+    const res = await fetch('/api/rules/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scope, projectDir, content })
+    });
+    return res.json();
+  },
+
+  async getPresetRules() {
+    if (window.mcpApi && window.mcpApi.getPresetRules) {
+      return window.mcpApi.getPresetRules();
+    }
+    const res = await fetch('/api/rules/presets');
+    return res.json();
+  },
+
+  async applyPresetRule(scope, projectDir, presetId) {
+    if (window.mcpApi && window.mcpApi.applyPresetRule) {
+      return window.mcpApi.applyPresetRule(scope, projectDir, presetId);
+    }
+    const res = await fetch('/api/rules/apply-preset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scope, projectDir, presetId })
+    });
+    return res.json();
+  },
+
+  async openRulesFile(scope, projectDir) {
+    if (window.mcpApi && window.mcpApi.openRulesFile) {
+      return window.mcpApi.openRulesFile(scope, projectDir);
+    }
+    return { ok: false, error: '当前环境不支持直接打开文件' };
   }
 };

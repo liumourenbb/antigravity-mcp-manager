@@ -241,6 +241,12 @@
             <span id="badgeServerCount" class="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white font-mono">-</span>
           </button>
 
+          <button onclick="switchTab('rules')" id="nav-rules" class="nav-item relative w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-win-textSecondary hover:bg-white/5 hover:text-white transition text-left">
+            <i data-lucide="scroll-text" class="w-4 h-4 text-emerald-400"></i>
+            <span>规则管理 (Rules)</span>
+            <span class="ml-auto text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-mono">规范</span>
+          </button>
+
           <button onclick="switchTab('presets')" id="nav-presets" class="nav-item relative w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-win-textSecondary hover:bg-white/5 hover:text-white transition text-left">
             <i data-lucide="store" class="w-4 h-4 text-indigo-400"></i>
             <span>预设模板市场</span>
@@ -435,6 +441,134 @@
         </div>
         <div id="backupsList" class="space-y-3">
           <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- VIEW 5: RULES MANAGEMENT VIEW -->
+      <section id="view-rules" class="hidden space-y-5">
+        <!-- COMMAND HEADER -->
+        <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+          <div>
+            <div class="flex items-center space-x-2">
+              <h2 class="text-xl font-bold tracking-tight text-white">Antigravity 规则管理 (Rules)</h2>
+              <span id="rules-scope-badge" class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                全局系统规则
+              </span>
+            </div>
+            <p class="text-xs text-win-textSecondary mt-0.5">约束与指导 Agent 编程范式、代码风格与操作安全（支持 AGENTS.md / GEMINI.md）</p>
+          </div>
+
+          <div class="flex items-center space-x-2.5">
+            <!-- SCOPE SWITCHER -->
+            <div class="flex items-center bg-win-surface p-1 rounded-lg border border-win-border text-xs">
+              <button data-rules-scope="global" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white shadow-sm transition-all">
+                全局规则 (Global)
+              </button>
+              <button data-rules-scope="workspace" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-[#252528] text-neutral-400 hover:text-neutral-200 transition-all">
+                项目专属规则 (Workspace)
+              </button>
+            </div>
+
+            <!-- ACTION BUTTONS -->
+            <button id="rules-open-presets-btn" class="px-3 py-1.5 rounded-lg bg-indigo-600/80 hover:bg-indigo-600 text-white text-xs font-semibold flex items-center space-x-1.5 shadow-sm transition border border-indigo-500/30">
+              <i data-lucide="library" class="w-3.5 h-3.5"></i>
+              <span>预设规则库</span>
+            </button>
+
+            <button id="rules-open-file-btn" title="在系统资源管理器或编辑器中打开" class="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white text-xs font-medium flex items-center space-x-1 border border-win-border transition">
+              <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+              <span>外部打开</span>
+            </button>
+
+            <button id="rules-save-btn" class="px-3.5 py-1.5 rounded-lg bg-[#252528] text-neutral-300 hover:bg-[#303034] text-xs font-semibold flex items-center space-x-1.5 shadow-sm transition">
+              <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>已是最新</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- STATS & BUDGET BAR -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3.5">
+          <div class="fluent-card p-3 flex items-center justify-between">
+            <div>
+              <p class="text-[11px] text-win-textSecondary font-medium">解析规则条目</p>
+              <p id="rules-stat-count" class="text-xl font-bold text-emerald-400 mt-0.5 tracking-tight">-</p>
+            </div>
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+              <i data-lucide="list-checks" class="w-4 h-4"></i>
+            </div>
+          </div>
+
+          <div class="fluent-card p-3 flex items-center justify-between">
+            <div>
+              <p class="text-[11px] text-win-textSecondary font-medium">文件字符规模</p>
+              <p id="rules-stat-chars" class="text-xl font-bold text-white mt-0.5 tracking-tight">-</p>
+            </div>
+            <div class="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+              <i data-lucide="file-text" class="w-4 h-4"></i>
+            </div>
+          </div>
+
+          <div class="fluent-card p-3 col-span-1 md:col-span-2 flex flex-col justify-between">
+            <div class="flex items-center justify-between text-[11px]">
+              <span class="text-win-textSecondary font-medium flex items-center space-x-1">
+                <span>Antigravity 规则预算 (24KB 官方单文件红线)</span>
+              </span>
+              <span id="rules-budget-text" class="font-mono text-xs font-semibold text-blue-400">-</span>
+            </div>
+            <div class="w-full bg-[#18181b] h-2 rounded-full overflow-hidden border border-[#2a2a2e] mt-2">
+              <div id="rules-budget-bar" class="h-full bg-blue-500 rounded-full transition-all duration-300" style="width: 0%;"></div>
+            </div>
+            <div class="flex items-center justify-between text-[10px] text-win-textTertiary mt-1.5 truncate">
+              <span class="truncate">路径: <span id="rules-file-path" class="font-mono text-neutral-400 select-all">-</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- MAIN DUAL-PANE WORKSPACE -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start min-h-[520px]">
+          <!-- LEFT: OUTLINE LIST (4 COLS) -->
+          <div class="lg:col-span-4 fluent-card p-4 flex flex-col h-[560px]">
+            <div class="flex items-center justify-between pb-3 border-b border-win-border">
+              <div class="flex items-center space-x-1.5">
+                <i data-lucide="layout-list" class="w-4 h-4 text-emerald-400"></i>
+                <span class="text-xs font-bold text-white">规则结构大纲</span>
+              </div>
+              <span class="text-[10px] text-win-textTertiary">点击定位源码</span>
+            </div>
+            <div id="rules-outline-list" class="space-y-2.5 overflow-y-auto flex-1 pt-3 pr-1">
+              <!-- Dynamically populated outline items -->
+            </div>
+          </div>
+
+          <!-- RIGHT: SOURCE EDITOR (8 COLS) -->
+          <div class="lg:col-span-8 fluent-card p-4 flex flex-col h-[560px]">
+            <div class="flex items-center justify-between pb-3 border-b border-win-border">
+              <div class="flex items-center space-x-2">
+                <i data-lucide="code" class="w-4 h-4 text-blue-400"></i>
+                <span class="text-xs font-bold text-white">Markdown 规则源码编辑器</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-win-textSecondary font-mono">AGENTS.md</span>
+              </div>
+              <div class="flex items-center space-x-2 text-[11px] text-win-textSecondary">
+                <span class="font-mono text-[10px] text-neutral-400 bg-neutral-800/80 px-1.5 py-0.5 rounded border border-neutral-700/50">Ctrl+S 保存</span>
+                <button id="rules-reload-btn" title="重新从磁盘读取" class="p-1 rounded hover:bg-white/10 text-neutral-400 hover:text-white transition">
+                  <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="relative flex-1 mt-3 flex flex-col">
+              <textarea id="rules-editor-textarea" spellcheck="false" placeholder="# 用户规则 (User Rules)..." class="w-full flex-1 bg-[#121214] border border-[#2a2a2e] rounded-xl p-4 text-neutral-100 font-mono text-xs leading-relaxed focus:outline-none focus:border-blue-500/80 focus:ring-1 focus:ring-blue-500/30 transition-all resize-none shadow-inner"></textarea>
+            </div>
+
+            <div class="flex items-center justify-between pt-3 mt-1 border-t border-win-border/50 text-[11px] text-win-textSecondary">
+              <span class="flex items-center space-x-1.5 text-neutral-400">
+                <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+                <span>安全保障：每次保存前自动生成历史快照，杜绝误操作</span>
+              </span>
+              <span class="text-[10px] text-neutral-500 font-mono">UTF-8 • Markdown • Progressive Disclosure</span>
+            </div>
+          </div>
         </div>
       </section>
     </main>
@@ -858,6 +992,36 @@
     </div>
   </div>
 
+  <!-- MODAL: RULES PRESETS LIBRARY -->
+  <div id="rules-presets-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="fluent-card bg-[#242424] border border-win-border rounded-xl w-full max-w-2xl max-h-[88vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+      <div class="px-5 py-3.5 border-b border-win-border flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="library" class="w-4 h-4 text-indigo-400"></i>
+          <h3 class="text-sm font-bold text-white">Antigravity 预设规则模板库</h3>
+        </div>
+        <button onclick="RulesManager.closePresetsModal()" class="text-win-textSecondary hover:text-white p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="p-5 overflow-y-auto flex-1 text-xs">
+        <p class="text-win-textSecondary mb-3 leading-relaxed">
+          精选高质量开发实践规则（包含用户规则 7 架构防膨胀、独立思考、数据安全备份红线等），点击即可一键追加到当前规则文件。
+        </p>
+        <div id="rules-presets-container" class="space-y-3.5">
+          <!-- Dynamically populated presets -->
+        </div>
+      </div>
+
+      <div class="px-5 py-3 border-t border-win-border bg-win-surface flex justify-end">
+        <button onclick="RulesManager.closePresetsModal()" class="px-4 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-semibold transition">
+          关闭
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODULAR JAVASCRIPT LOGIC (RULE 7 ARCHITECTURE) -->
   <script src="js/helpers.js"></script>
   <script src="js/api.js"></script>
@@ -866,6 +1030,7 @@
   <script src="js/paste-import-manager.js"></script>
   <script src="js/server-form-manager.js"></script>
   <script src="js/diagnostics-presets.js"></script>
+  <script src="js/rules-manager.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

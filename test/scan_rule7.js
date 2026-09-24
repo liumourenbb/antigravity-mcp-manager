@@ -56,6 +56,8 @@ const targetFiles = [
   'src/core/jetbrains.js',
   'src/core/paths.js',
   'src/core/presets.js',
+  'src/core/rules.js',
+  'src/core/rules-router.js',
   'src/desktop/ipc.js',
   'src/desktop/main.js',
   'src/web/js/helpers.js',
@@ -65,6 +67,7 @@ const targetFiles = [
   'src/web/js/paste-import-manager.js',
   'src/web/js/server-form-manager.js',
   'src/web/js/diagnostics-presets.js',
+  'src/web/js/rules-manager.js',
   'src/web/js/app.js',
   'src/web/index.html'
 ];

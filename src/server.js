@@ -9,6 +9,7 @@ import { PRESETS } from './core/presets.js';
 import { scanJetBrainsBridges, cleanStaleJetBrainsBridges } from './core/jetbrains.js';
 import { listBackups, restoreBackup } from './core/backup.js';
 import { PATHS } from './core/paths.js';
+import { handleRulesHttpRoutes } from './core/rules-router.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -97,6 +98,11 @@ export function startServer({ port = 3210, host = '127.0.0.1', workspaceDir = pr
           res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8' });
           return fs.createReadStream(filePath).pipe(res);
         }
+      }
+
+      // 1.2 Rules API Delegation
+      if (pathname.startsWith('/api/rules')) {
+        return await handleRulesHttpRoutes(req, res, parsedUrl, parseJsonBody, sendJson, sendError);
       }
 
       // 2. GET /api/servers

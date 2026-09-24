@@ -23,4 +23,10 @@ contextBridge.exposeInMainWorld('mcpApi', {
   restoreBackup: (id) => ipcRenderer.invoke('mcp:restoreBackup', id),
   readClipboard: () => ipcRenderer.invoke('mcp:readClipboard'),
   writeClipboard: (text) => ipcRenderer.invoke('mcp:writeClipboard', text),
+  getRules: (scope, projectDir) => ipcRenderer.invoke('mcp:getRules', { scope, projectDir }),
+  saveRules: (scope, projectDir, content) => ipcRenderer.invoke('mcp:saveRules', { scope, projectDir, content }),
+  getPresetRules: () => ipcRenderer.invoke('mcp:getPresetRules'),
+  applyPresetRule: (scope, projectDir, presetId) => ipcRenderer.invoke('mcp:applyPresetRule', { scope, projectDir, presetId }),
+  getModularRules: (scope, projectDir) => ipcRenderer.invoke('mcp:getModularRules', { scope, projectDir }),
+  openRulesFile: (scope, projectDir) => ipcRenderer.invoke('mcp:openRulesFile', { scope, projectDir }),
 });

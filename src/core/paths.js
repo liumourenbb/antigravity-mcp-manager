@@ -25,6 +25,12 @@ export const PATHS = {
 
   // Manager persistent settings
   settingsFile: path.join(homedir, '.gemini', 'antigravity', 'mcp_manager_settings.json'),
+
+  // Global Rules config file (Antigravity system rules)
+  globalRulesFile: path.join(homedir, '.gemini', 'config', 'AGENTS.md'),
+
+  // Global Rules modular directory
+  globalRulesDir: path.join(homedir, '.gemini', 'config', 'rules'),
 };
 
 /**

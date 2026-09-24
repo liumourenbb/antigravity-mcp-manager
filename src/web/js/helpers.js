@@ -71,4 +71,5 @@ function switchTab(tabId) {
 
   if (tabId === 'jetbrains' && typeof checkJetBrains === 'function') checkJetBrains();
   if (tabId === 'backups' && typeof renderBackupsView === 'function') renderBackupsView();
+  if (tabId === 'rules' && window.RulesManager && typeof RulesManager.load === 'function') RulesManager.load();
 }
