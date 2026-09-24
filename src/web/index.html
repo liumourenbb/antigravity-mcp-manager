@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Antigravity MCP Manager</title>
+  <!-- Local Vendor Scripts (100% Offline, Instant Load) -->
+  <script src="vendor/tailwind.js"></script>
+  <script src="vendor/lucide.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            win: {
+              bg: '#1c1c1c',
+              surface: '#242424',
+              card: '#2b2b2b',
+              cardHover: '#323232',
+              border: 'rgba(255, 255, 255, 0.08)',
+              borderFocus: 'rgba(255, 255, 255, 0.2)',
+              accent: '#60cdff',
+              accentHover: '#7ae0ff',
+              accentBg: 'rgba(96, 205, 255, 0.1)',
+              textPrimary: '#ffffff',
+              textSecondary: '#a0a0a0',
+              textTertiary: '#707070',
+            }
+          },
+          fontFamily: {
+            sans: ['"Segoe UI Variable Text"', '"Segoe UI"', '-apple-system', 'BlinkMacSystemFont', 'Roboto', 'sans-serif'],
+            mono: ['"Cascadia Code"', '"Consolas"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Windows 11 Custom Titlebar and Drag Region */
+    .titlebar-drag {
+      -webkit-app-region: drag;
+      user-select: none;
+    }
+    .titlebar-no-drag {
+      -webkit-app-region: no-drag;
+    }
+
+    /* Windows 11 Fluent & Figma Custom Scrollbar */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.16); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.32); }
+
+    /* Figma & Windows 11 Fluent 2 Acrylic Card */
+    .fluent-card {
+      position: relative;
+      background: rgba(36, 36, 42, 0.72);
+      backdrop-filter: blur(20px) saturate(160%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      box-shadow: 0 4px 18px -2px rgba(0, 0, 0, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .fluent-card:hover {
+      background: rgba(44, 44, 52, 0.88);
+      border-color: rgba(255, 255, 255, 0.18);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px -4px rgba(0, 0, 0, 0.48), inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
+    }
+
+    /* Stat Cards with Elegant Top Glowing Line */
+    .stat-card {
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2.5px;
+      border-radius: 12px 12px 0 0;
+      opacity: 0.85;
+      transition: opacity 0.2s;
+    }
+    .stat-card:hover::before {
+      opacity: 1;
+      height: 3px;
+    }
+    .stat-card-total::before { background: linear-gradient(90deg, #3b82f6, #06b6d4); }
+    .stat-card-enabled::before { background: linear-gradient(90deg, #10b981, #14b8a6); }
+    .stat-card-disabled::before { background: linear-gradient(90deg, #f43f5e, #fb7185); }
+    .stat-card-workspace::before { background: linear-gradient(90deg, #8b5cf6, #c084fc); }
+
+    /* Fluent Switch */
+    .fluent-switch {
+      position: relative;
+      display: inline-block;
+      width: 38px;
+      height: 20px;
+    }
+    .fluent-switch input { opacity: 0; width: 0; height: 0; }
+    .fluent-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 20px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .fluent-slider:before {
+      position: absolute;
+      content: "";
+      height: 12px;
+      width: 12px;
+      left: 3px;
+      bottom: 3px;
+      background-color: #e2e8f0;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    input:checked + .fluent-slider {
+      background-color: #0078d4;
+      border-color: #2b88d8;
+      box-shadow: 0 0 12px rgba(0, 120, 212, 0.35);
+    }
+    input:checked + .fluent-slider:before {
+      transform: translateX(18px);
+      background-color: #ffffff;
+    }
+
+    /* Windows 11 Nav Item Active Indicator */
+    .nav-item {
+      position: relative;
+      transition: all 0.15s ease-out;
+    }
+    .nav-item.active {
+      background: rgba(255, 255, 255, 0.08);
+      color: #ffffff;
+      box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+    }
+    .nav-item.active::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 22%;
+      bottom: 22%;
+      width: 3.5px;
+      border-radius: 4px;
+      background: #60cdff;
+      box-shadow: 0 0 8px rgba(96, 205, 255, 0.6);
+    }
+
+    /* Subtle Animated Glow Backdrops */
+    .bg-acrylic-glow {
+      background-color: #141417;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.10) 0px, transparent 45%),
+        radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.08) 0px, transparent 40%),
+        radial-gradient(at 50% 100%, rgba(14, 165, 233, 0.07) 0px, transparent 50%);
+    }
+  </style>
+</head>
+<body class="bg-acrylic-glow text-win-textPrimary min-h-screen flex flex-col font-sans select-none antialiased">
+
+  <!-- WINDOWS 11 TITLEBAR -->
+  <div class="h-10 titlebar-drag bg-[#1c1c20]/90 backdrop-blur-md border-b border-win-border/60 flex items-center justify-between px-3 text-xs shrink-0 z-50">
+    <div class="flex items-center space-x-2.5">
+      <div class="w-5 h-5 rounded-md bg-gradient-to-tr from-blue-600 via-indigo-500 to-cyan-400 flex items-center justify-center text-white shadow-sm shadow-blue-500/20">
+        <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+      </div>
+      <span class="font-semibold text-slate-200 tracking-wide text-xs">Antigravity MCP Manager</span>
+      <span class="px-1.5 py-0.5 rounded text-[10px] bg-win-accentBg text-win-accent font-mono border border-win-accent/20">Win11 Desktop</span>
+    </div>
+    <!-- Reserved space for native Windows 11 minimize/maximize/close buttons overlay -->
+    <div class="w-36 h-full titlebar-no-drag"></div>
+  </div>
+
+  <!-- APP CONTAINER -->
+  <div class="flex-1 flex overflow-hidden">
+
+    <!-- LEFT FLUENT NAVIGATION SIDEBAR -->
+    <aside class="w-64 bg-[#1a1a1f]/85 backdrop-blur-2xl border-r border-white/5 flex flex-col justify-between p-3.5 shrink-0 shadow-lg shadow-black/20">
+      <div class="space-y-4">
+        <!-- SEARCH BOX -->
+        <div class="relative">
+          <i data-lucide="search" class="w-4 h-4 text-win-textSecondary absolute left-3 top-2.5"></i>
+          <input type="text" id="searchInput" oninput="renderServers()" placeholder="搜索 MCP 服务..." class="w-full bg-[#141418] border border-white/10 rounded-lg pl-9 pr-3 py-1.5 text-xs text-win-textPrimary placeholder-win-textTertiary focus:outline-none focus:border-win-accent transition">
+        </div>
+
+        <!-- ANTIGRAVITY WORKSPACE CARD -->
+        <div class="p-3 bg-[#1e1e24]/80 hover:bg-[#23232a] border border-white/5 hover:border-purple-500/30 rounded-xl space-y-2 transition group shadow-sm">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-1.5">
+              <div class="w-4 h-4 rounded bg-purple-500/20 text-purple-300 flex items-center justify-center">
+                <i data-lucide="folder-git-2" class="w-2.5 h-2.5"></i>
+              </div>
+              <span class="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Antigravity 项目</span>
+            </div>
+            <button onclick="openProjectsModal()" title="查看并切换 Antigravity 所有项目" class="text-[10px] px-2 py-0.5 rounded bg-white/5 hover:bg-win-accent hover:text-black text-win-accent font-medium flex items-center space-x-1 transition">
+              <i data-lucide="arrow-left-right" class="w-2.5 h-2.5"></i>
+              <span>切换项目</span>
+            </button>
+          </div>
+
+          <div onclick="openProjectsModal()" class="cursor-pointer" title="点击快速切换 Antigravity 项目">
+            <div class="flex items-center justify-between">
+              <h4 id="lblWorkspaceName" class="text-xs font-bold text-white group-hover:text-win-accent transition truncate max-w-[140px]">检测中...</h4>
+              <span id="badgeWorkspaceMcpCount" class="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300 font-mono border border-purple-500/20">-</span>
+            </div>
+            <p id="lblCurrentWorkspace" class="text-[10px] font-mono text-win-textTertiary truncate mt-0.5" title="检测中...">检测中...</p>
+          </div>
+
+          <div class="pt-2 border-t border-white/5 flex items-center justify-between text-[10px]">
+            <button onclick="openProjectConfigFile()" title="直接用系统默认代码编辑器打开此项目的 .agents/mcp_config.json" class="text-win-textSecondary hover:text-purple-300 flex items-center space-x-1 transition">
+              <i data-lucide="file-code" class="w-3 h-3 text-purple-400"></i>
+              <span>打开配置</span>
+            </button>
+            <div class="flex items-center space-x-2">
+              <button onclick="syncCurrentWorkspace()" id="btnSyncAntigravity" title="同步登记到 Antigravity 信任列表" class="text-win-textSecondary hover:text-emerald-400 flex items-center space-x-1 transition">
+                <i data-lucide="check-check" class="w-3 h-3 text-emerald-400"></i>
+                <span id="lblSyncStatus">已同步</span>
+              </button>
+              <button onclick="chooseWorkspace()" title="选择本地其它文件夹" class="text-win-textSecondary hover:text-white flex items-center space-x-1 transition">
+                <i data-lucide="folder-open" class="w-3 h-3 text-amber-400"></i>
+                <span>浏览</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- NAVIGATION LINKS -->
+        <nav class="space-y-1">
+          <button onclick="switchTab('servers')" id="nav-servers" class="nav-item active relative w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-win-textSecondary hover:bg-white/5 hover:text-white transition text-left">
+            <i data-lucide="server" class="w-4 h-4 text-win-accent"></i>
+            <span>MCP 服务列表</span>
+            <span id="badgeServerCount" class="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white font-mono">-</span>
+          </button>
+
+          <button onclick="switchTab('presets')" id="nav-presets" class="nav-item relative w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-win-textSecondary hover:bg-white/5 hover:text-white transition text-left">
+            <i data-lucide="store" class="w-4 h-4 text-indigo-400"></i>
+            <span>预设模板市场</span>
+            <span class="ml-auto text-[10px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-mono">15+</span>
+          </button>
+
+          <button onclick="switchTab('jetbrains')" id="nav-jetbrains" class="nav-item relative w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-win-textSecondary hover:bg-white/5 hover:text-white transition text-left">
+            <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
+            <span>JetBrains 伴随诊断</span>
+            <span id="badgeJbDead" class="ml-auto hidden text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-mono">清理</span>
+          </button>
+
+          <button onclick="switchTab('backups')" id="nav-backups" class="nav-item relative w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-win-textSecondary hover:bg-white/5 hover:text-white transition text-left">
+            <i data-lucide="history" class="w-4 h-4 text-blue-400"></i>
+            <span>配置版本与快照</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- SIDEBAR FOOTER -->
+      <div class="pt-3 border-t border-win-border/60 text-[11px] text-win-textSecondary flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block shadow-sm shadow-emerald-400/50"></span>
+          <span>原生 IPC 驱动</span>
+        </div>
+        <button onclick="fetchServers()" title="刷新全部状态" class="p-1.5 rounded-md hover:bg-white/10 text-win-textSecondary hover:text-white transition">
+          <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- RIGHT CONTENT AREA -->
+    <main class="flex-1 bg-transparent overflow-y-auto flex flex-col p-6 space-y-5">
+
+      <!-- VIEW 1: SERVERS VIEW -->
+      <section id="view-servers" class="space-y-5">
+        <!-- COMMAND BAR -->
+        <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+          <div>
+            <h2 class="text-xl font-bold tracking-tight text-white">Model Context Protocol 服务</h2>
+            <p class="text-xs text-win-textSecondary mt-0.5">集中管理 Antigravity 全局与工作区 MCP 工具连接</p>
+          </div>
+
+          <div class="flex items-center space-x-2.5">
+            <!-- SCOPE SELECTOR PILLS -->
+            <div class="flex items-center bg-win-surface p-1 rounded-lg border border-win-border text-xs">
+              <button onclick="setScopeFilter('workspace')" id="pillWorkspace" class="scope-pill px-2.5 py-1 rounded-md font-semibold text-purple-200 bg-purple-600/30 border border-purple-500/30 shadow-sm transition" data-scope="workspace">项目专属 MCP</button>
+              <button onclick="setScopeFilter('global')" id="pillGlobal" class="scope-pill px-2.5 py-1 rounded-md font-medium text-win-textSecondary hover:text-white transition" data-scope="global">全局</button>
+              <button onclick="setScopeFilter('all')" id="pillAll" class="scope-pill px-2.5 py-1 rounded-md font-medium text-win-textSecondary hover:text-white transition" data-scope="all">全部</button>
+              <button onclick="setScopeFilter('other')" id="pillOther" class="scope-pill px-2.5 py-1 rounded-md font-medium text-win-textSecondary hover:text-white transition flex items-center space-x-1" data-scope="other">
+                <span>停用池</span>
+                <span id="badgeDisabledCount" class="hidden px-1.5 py-0.2 rounded-full text-[10px] bg-rose-500/20 text-rose-300 font-mono font-bold">0</span>
+              </button>
+            </div>
+
+            <!-- PASTE BUTTON -->
+            <button onclick="openPasteModal()" title="从剪贴板粘贴导入 MCP 配置 (快捷键 Ctrl+V)" class="px-3 py-1.5 rounded-lg bg-indigo-600/80 hover:bg-indigo-600 text-white text-xs font-semibold flex items-center space-x-1.5 shadow-sm transition border border-indigo-500/30">
+              <i data-lucide="clipboard-paste" class="w-3.5 h-3.5"></i>
+              <span>粘贴 MCP</span>
+            </button>
+
+            <!-- ADD BUTTON -->
+            <button onclick="openAddServerModal()" class="px-3 py-1.5 rounded-lg bg-[#0078d4] hover:bg-[#106ebe] text-white text-xs font-semibold flex items-center space-x-1.5 shadow-sm transition">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+              <span>添加服务</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- STATS OVERVIEW ROW -->
+        <div class="grid grid-cols-4 gap-3.5">
+          <div onclick="setScopeFilter('all')" title="点击查看全部 MCP 服务" class="fluent-card stat-card stat-card-total p-3.5 flex items-center justify-between cursor-pointer hover:border-blue-500/50 hover:bg-white/5 transition">
+            <div>
+              <p class="text-[11px] text-win-textSecondary font-medium">服务总数</p>
+              <p id="statTotal" class="text-2xl font-bold text-white mt-0.5 tracking-tight">-</p>
+            </div>
+            <div class="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+              <i data-lucide="cpu" class="w-4.5 h-4.5"></i>
+            </div>
+          </div>
+
+          <div onclick="setScopeFilter('all')" title="点击查看全部就绪服务" class="fluent-card stat-card stat-card-enabled p-3.5 flex items-center justify-between cursor-pointer hover:border-emerald-500/50 hover:bg-emerald-500/5 transition">
+            <div>
+              <p class="text-[11px] text-emerald-400/90 font-medium">运行中</p>
+              <p id="statEnabled" class="text-2xl font-bold text-emerald-400 mt-0.5 tracking-tight">-</p>
+            </div>
+            <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+              <i data-lucide="check-circle-2" class="w-4.5 h-4.5"></i>
+            </div>
+          </div>
+
+          <div onclick="setScopeFilter('other')" title="点击查看所有已停用服务 (停用池)" class="fluent-card stat-card stat-card-disabled p-3.5 flex items-center justify-between cursor-pointer hover:border-rose-500/60 hover:bg-rose-500/10 transition border border-rose-500/20">
+            <div>
+              <p class="text-[11px] text-rose-300 font-medium flex items-center space-x-1">
+                <span>已停用 (停用池)</span>
+              </p>
+              <p id="statDisabled" class="text-2xl font-bold text-rose-300 mt-0.5 tracking-tight">-</p>
+            </div>
+            <div class="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
+              <i data-lucide="power-off" class="w-4.5 h-4.5"></i>
+            </div>
+          </div>
+
+          <div onclick="setScopeFilter('workspace')" title="点击仅看当前工作区专属服务" class="fluent-card stat-card stat-card-workspace p-3.5 flex items-center justify-between cursor-pointer hover:border-purple-500/60 hover:bg-purple-500/10 transition">
+            <div>
+              <p class="text-[11px] text-purple-400/90 font-medium">工作区专有</p>
+              <p id="statWorkspace" class="text-2xl font-bold text-purple-400 mt-0.5 tracking-tight">-</p>
+            </div>
+            <div class="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+              <i data-lucide="folder-git-2" class="w-4.5 h-4.5"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- ACTIVE WORKSPACE CONTEXT BAR -->
+        <div id="workspaceContextBar" class="p-3 bg-gradient-to-r from-purple-950/40 via-win-surface to-win-surface border border-purple-500/20 rounded-xl flex items-center justify-between text-xs">
+          <div class="flex items-center space-x-2.5">
+            <span class="w-2 h-2 rounded-full bg-purple-400"></span>
+            <span class="text-win-textSecondary">当前工程工作区:</span>
+            <span id="barWorkspaceName" class="font-bold text-white">检测中...</span>
+            <span id="barWorkspacePath" class="text-win-textTertiary font-mono text-[11px] truncate max-w-[280px]">检测中...</span>
+            <span id="barMcpStatus" class="px-1.5 py-0.5 rounded text-[10px] bg-purple-500/20 text-purple-300 font-mono">-</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="setScopeFilter('workspace')" id="btnFilterProjectOnly" title="仅查看当前项目下的专属 MCP" class="px-2.5 py-1 rounded bg-purple-600 text-white text-xs font-semibold flex items-center space-x-1 shadow-sm transition">
+              <i data-lucide="filter" class="w-3 h-3 text-purple-200"></i>
+              <span>仅看此项目 MCP</span>
+            </button>
+            <button onclick="openProjectConfigFile()" title="在外部编辑器中直接打开此项目的 .agents/mcp_config.json" class="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-purple-300 hover:text-white text-xs font-medium flex items-center space-x-1.5 transition">
+              <i data-lucide="file-code" class="w-3.5 h-3.5 text-purple-400"></i>
+              <span>打开配置文件</span>
+            </button>
+            <button onclick="openProjectsModal()" class="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-win-accent text-xs font-medium flex items-center space-x-1 transition">
+              <i data-lucide="arrow-left-right" class="w-3 h-3"></i>
+              <span>切换项目</span>
+            </button>
+            <button onclick="initCurrentWorkspaceMcp()" id="btnBarInitMcp" class="hidden px-2.5 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium flex items-center space-x-1 transition">
+              <i data-lucide="sparkles" class="w-3 h-3"></i>
+              <span>初始化配置 (.agents)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- SERVERS GRID -->
+        <div id="serversContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          <!-- Dynamically populated -->
+        </div>
+
+        <!-- EMPTY STATE -->
+        <div id="emptyState" class="hidden fluent-card text-center py-16">
+          <div class="w-12 h-12 rounded-full bg-white/5 text-win-textSecondary mx-auto flex items-center justify-center mb-3">
+            <i data-lucide="inbox" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-sm font-semibold text-slate-200">没有匹配的 MCP 服务</h3>
+          <p class="text-xs text-win-textSecondary mt-1">请尝试更换筛选条件，或点击右上角添加新服务。</p>
+        </div>
+      </section>
+
+      <!-- VIEW 2: PRESETS MARKET VIEW -->
+      <section id="view-presets" class="hidden space-y-5">
+        <div>
+          <h2 class="text-xl font-bold tracking-tight text-white">预设模板市场</h2>
+          <p class="text-xs text-win-textSecondary mt-0.5">官方与常用 MCP 工具模板，一键套用并自动配置参数</p>
+        </div>
+        <div id="presetsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- VIEW 3: JETBRAINS DIAGNOSTICS VIEW -->
+      <section id="view-jetbrains" class="hidden space-y-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-xl font-bold tracking-tight text-white">JetBrains IDE 伴随 Bridge 诊断</h2>
+            <p class="text-xs text-win-textSecondary mt-0.5">检测并清理 IntelliJ IDEA 等 IDE 重启后残留的无效桥接脚本</p>
+          </div>
+          <button onclick="cleanDeadBridges()" class="px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold flex items-center space-x-1.5 shadow-sm transition">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            <span>一键清理失效 Bridge</span>
+          </button>
+        </div>
+        <div id="jetbrainsList" class="space-y-3">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+
+      <!-- VIEW 4: BACKUPS & SNAPSHOTS VIEW -->
+      <section id="view-backups" class="hidden space-y-5">
+        <div>
+          <h2 class="text-xl font-bold tracking-tight text-white">配置快照与历史版本</h2>
+          <p class="text-xs text-win-textSecondary mt-0.5">修改前自动生成的本地配置安全快照，随时一键还原</p>
+        </div>
+        <div id="backupsList" class="space-y-3">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL: PASTE & IMPORT MCP -->
+  <div id="modalPasteMcp" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="fluent-card bg-[#242424] border border-win-border rounded-xl w-full max-w-xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+      <div class="px-5 py-3.5 border-b border-win-border flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="clipboard-paste" class="w-4 h-4 text-indigo-400"></i>
+          <h3 class="text-sm font-bold text-white">粘贴导入 MCP 服务配置</h3>
+        </div>
+        <button onclick="closeModal('modalPasteMcp')" class="text-win-textSecondary hover:text-white p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="font-medium text-win-textSecondary flex items-center space-x-1.5">
+              <span>MCP JSON 配置内容 *</span>
+              <span id="pasteFormatHint" class="text-[10px] text-win-textTertiary font-mono">(支持单服务对象、键值对或根配置对象)</span>
+            </label>
+            <span id="pasteStatusBadge" class="text-[11px] font-mono text-indigo-400"></span>
+          </div>
+          <textarea id="pasteJsonInput" rows="7" oninput="handlePasteJsonChange()" placeholder="请在此直接按 Ctrl+V 粘贴 MCP JSON 代码，或点击下方【从系统剪贴板粘贴】按钮..." class="w-full bg-[#181818] border border-win-border rounded-lg p-3 text-white font-mono text-[11px] leading-relaxed focus:outline-none focus:border-indigo-500"></textarea>
+          
+          <!-- QUICK ACTION BAR BELOW TEXTAREA -->
+          <div class="flex items-center justify-between mt-2 pt-1">
+            <div class="flex items-center space-x-2">
+              <button type="button" onclick="readFromClipboardToModal(true)" class="px-2.5 py-1 rounded bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 hover:text-white flex items-center space-x-1 border border-indigo-500/30 transition text-xs">
+                <i data-lucide="clipboard-paste" class="w-3.5 h-3.5"></i>
+                <span>从系统剪贴板粘贴</span>
+              </button>
+              <button type="button" onclick="loadSampleMcpConfig()" class="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white flex items-center space-x-1 border border-win-border transition text-xs">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
+                <span>填入示例模板</span>
+              </button>
+              <button type="button" onclick="clearPasteInput()" class="px-2 py-1 rounded bg-white/5 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 transition text-xs">
+                <span>清空</span>
+              </button>
+            </div>
+            <span class="text-[10px] text-win-textTertiary font-mono">快捷键: Ctrl+V</span>
+          </div>
+
+          <div id="pasteErrorMsg" class="hidden text-rose-400 text-[11px] mt-2 font-mono flex items-center space-x-1 bg-rose-500/10 p-2 rounded border border-rose-500/20">
+            <i data-lucide="alert-circle" class="w-3.5 h-3.5 shrink-0"></i>
+            <span id="pasteErrorText"></span>
+          </div>
+        </div>
+
+        <!-- PARSED SERVER CONFIG PREVIEW -->
+        <div id="pasteParsedPreview" class="hidden p-3.5 bg-[#1a1a1f] border border-indigo-500/25 rounded-xl space-y-3">
+          <div class="flex items-center justify-between pb-2 border-b border-white/5">
+            <span class="text-indigo-300 font-semibold text-xs flex items-center space-x-1.5">
+              <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>已成功解析 MCP 服务配置</span>
+            </span>
+            <span id="pasteParsedTypeBadge" class="px-1.5 py-0.5 rounded font-mono text-[10px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">Stdio</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-win-textSecondary mb-1 font-medium">导入服务名称 *</label>
+              <input type="text" id="pasteServerName" oninput="validatePasteServerName()" class="w-full bg-[#141414] border border-win-border rounded-lg px-2.5 py-1.5 text-white font-mono focus:outline-none focus:border-indigo-400 text-xs">
+              <span id="pasteNameConflictHint" class="hidden text-[10px] text-amber-400 font-mono mt-0.5 block"></span>
+            </div>
+            <div>
+              <label class="block text-win-textSecondary mb-1 font-medium">导入目标作用域 *</label>
+              <div class="flex items-center bg-[#141414] p-0.5 rounded-lg border border-win-border h-[32px] space-x-1">
+                <button type="button" id="btnPasteScopeGlobal" onclick="setPasteScope('global')" class="flex-1 h-full rounded text-[11px] font-semibold flex items-center justify-center space-x-1 transition">
+                  <i data-lucide="globe" class="w-3 h-3"></i>
+                  <span>全局配置</span>
+                </button>
+                <button type="button" id="btnPasteScopeWorkspace" onclick="setPasteScope('workspace')" class="flex-1 h-full rounded text-[11px] font-semibold flex items-center justify-center space-x-1 transition">
+                  <i data-lucide="folder-git-2" class="w-3 h-3"></i>
+                  <span>工作空间</span>
+                </button>
+              </div>
+              <input type="hidden" id="pasteTargetScope" value="workspace">
+            </div>
+          </div>
+
+          <!-- WORKSPACE TARGET SELECTOR: PROJECTS & WORKSPACE LINKED -->
+          <div id="pasteWorkspaceRow" class="p-3 bg-[#18181c] border border-purple-500/25 rounded-xl space-y-2.5">
+            <div class="flex items-center justify-between pb-1 border-b border-white/5">
+              <span class="font-semibold text-purple-300 text-xs flex items-center space-x-1.5">
+                <i data-lucide="folder-git-2" class="w-3.5 h-3.5 text-purple-400"></i>
+                <span>目标项目与工作空间 (Project & Workspace) *</span>
+              </span>
+              <div class="flex items-center space-x-2">
+                <button type="button" onclick="openProjectConfigFile(document.getElementById('pasteTargetWorkspace')?.value)" class="text-[11px] text-purple-300 hover:text-white flex items-center space-x-1 transition">
+                  <i data-lucide="file-code" class="w-3 h-3 text-purple-400"></i>
+                  <span>打开配置</span>
+                </button>
+                <button type="button" onclick="browseCustomWorkspaceForPaste()" class="text-[11px] text-win-accent hover:underline flex items-center space-x-1">
+                  <i data-lucide="folder-open" class="w-3 h-3"></i>
+                  <span>浏览其它目录...</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2.5">
+              <!-- 1. 选择项目 (Project) -->
+              <div>
+                <label class="block text-win-textSecondary mb-1 font-medium flex items-center space-x-1">
+                  <span>1. 目标项目 (Project) *</span>
+                </label>
+                <select id="pasteProjectSelect" onchange="handlePasteProjectSelectChange()" class="w-full bg-[#141414] border border-win-border rounded-lg px-2.5 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-purple-400">
+                  <!-- Dynamically populated from antigravityProjects -->
+                </select>
+              </div>
+
+              <!-- 2. 选择工作空间 (Workspace) -->
+              <div>
+                <label class="block text-win-textSecondary mb-1 font-medium flex items-center space-x-1">
+                  <span>2. 对应工作空间 (Workspace) *</span>
+                </label>
+                <select id="pasteTargetWorkspace" onchange="handlePasteWorkspaceChange()" class="w-full bg-[#141414] border border-win-border rounded-lg px-2.5 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-purple-400">
+                  <!-- Dynamically populated from antigravityProjects -->
+                </select>
+              </div>
+            </div>
+
+            <!-- 目标写入路径提示与状态徽章 -->
+            <div class="flex items-center justify-between text-[11px] pt-0.5">
+              <p id="pasteScopeHint" class="text-purple-400 font-mono truncate"></p>
+              <span id="pasteWorkspaceMcpBadge" class="px-1.5 py-0.2 rounded font-mono shrink-0 ml-2"></span>
+            </div>
+          </div>
+
+          <!-- SUMMARY DETAILS -->
+          <div class="bg-[#121214] p-2.5 rounded-lg border border-win-border/50 text-[11px] font-mono text-slate-300 space-y-1">
+            <div class="truncate"><span class="text-win-textTertiary">执行命令/URL:</span> <span id="pasteSummaryCmd" class="text-slate-100 font-bold"></span></div>
+            <div id="pasteSummaryArgsRow" class="truncate"><span class="text-win-textTertiary">运行参数:</span> <span id="pasteSummaryArgs" class="text-purple-300"></span></div>
+            <div id="pasteSummaryEnvRow" class="truncate hidden"><span class="text-win-textTertiary">环境变量:</span> <span id="pasteSummaryEnv" class="text-emerald-300"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="px-5 py-3.5 bg-[#1f1f1f] border-t border-win-border flex items-center justify-between">
+        <span class="text-[11px] text-win-textTertiary">支持从剪贴板粘贴或直接在上方修改 JSON</span>
+        <div class="flex items-center space-x-2">
+          <button type="button" onclick="closeModal('modalPasteMcp')" class="px-3.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-xs transition">取消</button>
+          <button type="button" id="btnConfirmPasteImport" onclick="executePasteImport()" class="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center space-x-1.5 shadow-sm transition">
+            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+            <span>确认导入保存</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD / EDIT SERVER -->
+  <div id="modalServerForm" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="fluent-card bg-[#242424] border border-win-border rounded-xl w-full max-w-xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+      <div class="px-5 py-3.5 border-b border-win-border flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="sliders" class="w-4 h-4 text-win-accent"></i>
+          <h3 id="modalServerTitle" class="text-sm font-bold text-white">配置 MCP 服务</h3>
+        </div>
+        <button onclick="closeModal('modalServerForm')" class="text-win-textSecondary hover:text-white p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <form id="serverForm" novalidate onsubmit="handleSaveServer(event)" class="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+        <input type="hidden" id="formOriginalName">
+        <input type="hidden" id="formOriginalScope">
+        <input type="hidden" id="formOriginalWorkspaceDir">
+        
+        <div class="grid grid-cols-2 gap-3.5">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block font-medium text-win-textSecondary">服务标识名称 *</label>
+              <span id="lblFormNameChangeHint" class="text-[10px] text-purple-400 font-mono hidden"></span>
+            </div>
+            <input type="text" id="formName" oninput="handleFormNameChange()" required placeholder="如 postgres, github, lark-mcp" class="w-full bg-[#1a1a1a] border border-win-border rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-win-accent">
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block font-medium text-win-textSecondary">保存作用域 *</label>
+              <span id="lblScopeChangeHint" class="text-[10px] text-amber-400 font-mono hidden">* 变更作用域将自动迁移</span>
+            </div>
+            <div class="flex items-center bg-[#141414] p-1 rounded-lg border border-win-border h-[38px] space-x-1">
+              <button type="button" id="btnScopeGlobal" onclick="setFormScope('global')" class="flex-1 h-full rounded-md text-xs font-semibold flex items-center justify-center space-x-1.5 transition">
+                <i data-lucide="globe" class="w-3.5 h-3.5"></i>
+                <span>全局配置</span>
+              </button>
+              <button type="button" id="btnScopeWorkspace" onclick="setFormScope('workspace')" class="flex-1 h-full rounded-md text-xs font-semibold flex items-center justify-center space-x-1.5 transition">
+                <i data-lucide="folder-git-2" class="w-3.5 h-3.5"></i>
+                <span>项目工作空间</span>
+              </button>
+            </div>
+            <input type="hidden" id="formScope" value="global">
+          </div>
+        </div>
+
+        <!-- ANTIGRAVITY PROJECTS & WORKSPACE SELECTOR -->
+        <div id="sectionWorkspaceSelect" class="p-3 bg-[#1c1c1c] border border-purple-500/25 rounded-xl space-y-2.5 hidden">
+          <div class="flex items-center justify-between pb-1 border-b border-white/5">
+            <label class="font-semibold text-purple-300 text-xs flex items-center space-x-1.5">
+              <i data-lucide="folder-git-2" class="w-3.5 h-3.5 text-purple-400"></i>
+              <span>目标项目与工作空间 (Project & Workspace) *</span>
+            </label>
+            <div class="flex items-center space-x-2.5">
+              <button type="button" onclick="openProjectConfigFile(document.getElementById('formTargetWorkspace')?.value)" class="text-[11px] text-purple-300 hover:text-white flex items-center space-x-1 transition">
+                <i data-lucide="file-code" class="w-3 h-3 text-purple-400"></i>
+                <span>打开配置文件</span>
+              </button>
+              <button type="button" onclick="browseCustomWorkspaceForForm()" class="text-[11px] text-win-accent hover:underline flex items-center space-x-1">
+                <i data-lucide="folder-open" class="w-3 h-3"></i>
+                <span>浏览其它目录...</span>
+              </button>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2.5">
+            <!-- 1. 选择项目 (Project) -->
+            <div>
+              <label class="block text-win-textSecondary mb-1 font-medium flex items-center space-x-1">
+                <span>1. 选择目标项目 (Project) *</span>
+              </label>
+              <select id="formProjectSelect" onchange="handleFormProjectSelectChange()" class="w-full bg-[#141414] border border-win-border rounded-lg px-2.5 py-1.5 text-white text-xs font-mono focus:outline-none focus:border-purple-400">
+                <!-- Dynamically populated from antigravityProjects -->
+              </select>
+            </div>
+            <!-- 2. 选择工作空间 (Workspace) -->
+            <div>
+              <label class="block text-win-textSecondary mb-1 font-medium flex items-center space-x-1">
+                <span>2. 对应工作空间 (Workspace) *</span>
+              </label>
+              <select id="formTargetWorkspace" onchange="handleFormWorkspaceChange()" class="w-full bg-[#141414] border border-win-border rounded-lg px-2.5 py-1.5 text-white text-xs font-mono focus:outline-none focus:border-purple-400">
+                <!-- Dynamically populated from antigravityProjects -->
+              </select>
+            </div>
+          </div>
+          <div class="flex items-center justify-between text-[11px] pt-0.5">
+            <p id="formScopeHint" class="text-purple-400 font-mono truncate"></p>
+            <span id="formWorkspaceMcpBadge" class="px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-300 font-mono shrink-0 ml-2"></span>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-medium text-win-textSecondary mb-1">传输通道 (Transport) *</label>
+          <div class="flex space-x-4">
+            <label class="flex items-center space-x-2 cursor-pointer text-slate-300">
+              <input type="radio" name="formType" value="stdio" checked onchange="toggleTransportFields()" class="text-win-accent focus:ring-0">
+              <span>Stdio (本地命令行)</span>
+            </label>
+            <label class="flex items-center space-x-2 cursor-pointer text-slate-300">
+              <input type="radio" name="formType" value="http" onchange="toggleTransportFields()" class="text-win-accent focus:ring-0">
+              <span>HTTP / SSE (远程 URL)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- STDIO FIELDS -->
+        <div id="sectionStdio" class="space-y-3.5 pt-1">
+          <div>
+            <label class="block font-medium text-win-textSecondary mb-1">可执行程序 (Command) *</label>
+            <input type="text" id="formCommand" placeholder="npx, uv, python, node, docker" class="w-full bg-[#1a1a1a] border border-win-border rounded-lg px-3 py-2 text-white focus:outline-none focus:border-win-accent">
+          </div>
+
+          <div>
+            <label class="block font-medium text-win-textSecondary mb-1">启动参数 (Args，每行一项)</label>
+            <textarea id="formArgs" rows="3" placeholder="-y&#10;@modelcontextprotocol/server-postgres&#10;postgresql://..." class="w-full bg-[#1a1a1a] border border-win-border rounded-lg px-3 py-2 font-mono text-white focus:outline-none focus:border-win-accent"></textarea>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="font-medium text-win-textSecondary">环境变量 (Environment Variables)</label>
+              <button type="button" onclick="addEnvRow()" class="text-win-accent hover:underline flex items-center space-x-1">
+                <i data-lucide="plus" class="w-3 h-3"></i>
+                <span>添加变量</span>
+              </button>
+            </div>
+            <div id="envContainer" class="space-y-2"></div>
+          </div>
+        </div>
+
+        <!-- HTTP FIELDS -->
+        <div id="sectionHttp" class="space-y-3.5 pt-1 hidden">
+          <div>
+            <label class="block font-medium text-win-textSecondary mb-1">服务端点 URL *</label>
+            <input type="text" id="formUrl" placeholder="https://mcp.context7.com/mcp" class="w-full bg-[#1a1a1a] border border-win-border rounded-lg px-3 py-2 text-white focus:outline-none focus:border-win-accent">
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="font-medium text-win-textSecondary">请求头 (Headers，如 Authorization)</label>
+              <button type="button" onclick="addHeaderRow()" class="text-win-accent hover:underline flex items-center space-x-1">
+                <i data-lucide="plus" class="w-3 h-3"></i>
+                <span>添加 Header</span>
+              </button>
+            </div>
+            <div id="headerContainer" class="space-y-2"></div>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-win-border flex items-center justify-between">
+          <label class="flex items-center space-x-2 cursor-pointer">
+            <input type="checkbox" id="formDisabled" class="rounded border-win-border text-win-accent focus:ring-0">
+            <span class="text-win-textSecondary">初始状态设为停用 (disabled: true)</span>
+          </label>
+          <div class="flex items-center space-x-2">
+            <button type="button" onclick="closeModal('modalServerForm')" class="px-3.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 transition">取消</button>
+            <button type="button" id="btnSaveServer" onclick="handleSaveServer(event)" class="px-4 py-1.5 rounded-lg bg-[#0078d4] hover:bg-[#106ebe] text-white font-medium transition shadow-sm flex items-center space-x-1.5">
+              <span>保存</span>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: TOOL SCHEMA VIEWER -->
+  <div id="modalTools" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="fluent-card bg-[#242424] border border-win-border rounded-xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+      <div class="px-5 py-3.5 border-b border-win-border flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="wrench" class="w-4 h-4 text-emerald-400"></i>
+          <div>
+            <h3 id="modalToolsTitle" class="text-sm font-bold text-white">工具 Schema 探查</h3>
+            <p id="modalToolsSubtitle" class="text-[11px] text-win-textSecondary">查看 Antigravity 已缓存的工具与参数定义</p>
+          </div>
+        </div>
+        <button onclick="closeModal('modalTools')" class="text-win-textSecondary hover:text-white p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="p-5 overflow-y-auto flex-1 space-y-3" id="toolsContent"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: ANTIGRAVITY PROJECTS & WORKSPACES -->
+  <div id="modalProjects" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="fluent-card bg-[#242424] border border-win-border rounded-xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+      <div class="px-5 py-3.5 border-b border-win-border flex items-center justify-between">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-white shadow-sm">
+            <i data-lucide="folder-git-2" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white flex items-center space-x-2">
+              <span>Antigravity 项目工作区</span>
+              <span id="modalProjectCount" class="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-mono">-</span>
+            </h3>
+            <p class="text-[11px] text-win-textSecondary">无缝同步 Antigravity 信任项目与工作区专属 MCP 配置</p>
+          </div>
+        </div>
+        <div class="flex items-center space-x-1">
+          <button onclick="refreshProjects(true)" title="重新同步扫描 Antigravity 项目" class="p-1.5 rounded-md hover:bg-white/10 text-win-textSecondary hover:text-white transition">
+            <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+          </button>
+          <button onclick="closeModal('modalProjects')" class="p-1.5 rounded-md hover:bg-white/10 text-win-textSecondary hover:text-white transition">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- SEARCH & FILTER -->
+      <div class="p-3.5 border-b border-win-border/50 bg-[#1e1e1e] flex items-center justify-between gap-3">
+        <div class="relative flex-1">
+          <i data-lucide="search" class="w-4 h-4 text-win-textSecondary absolute left-3 top-2.5"></i>
+          <input type="text" id="projectSearchInput" oninput="renderProjectsList()" placeholder="搜索项目名或路径..." class="w-full bg-[#161616] border border-win-border rounded-lg pl-9 pr-3 py-1.5 text-xs text-white placeholder-win-textTertiary focus:outline-none focus:border-win-accent">
+        </div>
+        <button onclick="chooseWorkspace()" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-200 text-xs font-medium flex items-center space-x-1.5 transition shrink-0">
+          <i data-lucide="folder-plus" class="w-3.5 h-3.5 text-blue-400"></i>
+          <span>浏览本地其它目录</span>
+        </button>
+      </div>
+
+      <!-- PROJECT LIST -->
+      <div class="p-4 overflow-y-auto flex-1 space-y-2.5" id="projectsContainer">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="fixed bottom-5 right-5 z-[100] hidden transition-all duration-200">
+    <div class="fluent-card bg-[#282828] border border-win-border px-4 py-2.5 rounded-lg shadow-xl flex items-center space-x-2.5 text-xs">
+      <i id="toastIcon" data-lucide="info" class="w-4 h-4 text-win-accent"></i>
+      <span id="toastMsg" class="text-white">消息通知</span>
+    </div>
+  </div>
+
+  <!-- GLOBAL MCP HOVER TOOLTIP CARD (FLUID, UNCLIPPED) -->
+  <div id="mcpGlobalTooltip" class="fixed z-[9999] pointer-events-none opacity-0 scale-95 transition-all duration-150 ease-out bg-[#1c1c22]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.65),inset_0_1px_0_0_rgba(255,255,255,0.1)] p-3.5 text-xs text-white max-w-sm hidden">
+    <div class="flex items-center justify-between pb-2 mb-2 border-b border-white/5">
+      <div class="flex items-center space-x-2">
+        <div id="tipIconBox" class="w-6 h-6 rounded-md flex items-center justify-center shrink-0">
+          <i id="tipIcon" data-lucide="folder-git-2" class="w-3.5 h-3.5"></i>
+        </div>
+        <div class="truncate max-w-[190px]">
+          <h4 id="tipServerName" class="font-bold text-white text-xs truncate"></h4>
+          <p id="tipScopeLabel" class="text-[10px] font-mono truncate"></p>
+        </div>
+      </div>
+      <span id="tipScopeBadge" class="text-[10px] px-1.5 py-0.5 rounded font-mono font-medium shrink-0"></span>
+    </div>
+
+    <div class="space-y-1.5 text-[11px]">
+      <div class="flex items-start space-x-2">
+        <span class="text-win-textTertiary shrink-0 font-medium">所属项目:</span>
+        <span id="tipProjectName" class="font-bold text-white truncate"></span>
+      </div>
+      <div class="flex items-start space-x-2">
+        <span class="text-win-textTertiary shrink-0 font-medium">工作空间:</span>
+        <span id="tipWorkspacePath" class="font-mono text-slate-300 break-all select-all font-semibold"></span>
+      </div>
+      <div class="flex items-start space-x-2">
+        <span class="text-win-textTertiary shrink-0 font-medium">配置文件:</span>
+        <span id="tipConfigPath" class="font-mono text-purple-300/90 break-all select-all"></span>
+      </div>
+      <div id="tipScopeDesc" class="pt-1.5 mt-1 border-t border-win-border/30 text-[10px] text-win-textSecondary leading-relaxed">
+      </div>
+    </div>
+  </div>
+
+  <!-- MODULAR JAVASCRIPT LOGIC (RULE 7 ARCHITECTURE) -->
+  <script src="js/helpers.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/workspace-manager.js"></script>
+  <script src="js/server-card-renderer.js"></script>
+  <script src="js/paste-import-manager.js"></script>
+  <script src="js/server-form-manager.js"></script>
+  <script src="js/diagnostics-presets.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

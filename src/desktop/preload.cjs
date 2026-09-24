@@ -1,0 +1,26 @@
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('mcpApi', {
+  isDesktop: true,
+  getActiveWorkspace: () => ipcRenderer.invoke('mcp:getActiveWorkspace'),
+  getAntigravityProjects: () => ipcRenderer.invoke('mcp:getAntigravityProjects'),
+  selectWorkspaceFolder: () => ipcRenderer.invoke('mcp:selectWorkspaceFolder'),
+  setActiveWorkspace: (dir) => ipcRenderer.invoke('mcp:setActiveWorkspace', dir),
+  syncToAntigravity: (dir) => ipcRenderer.invoke('mcp:syncToAntigravity', dir),
+  initWorkspaceMcp: (dir) => ipcRenderer.invoke('mcp:initWorkspaceMcp', dir),
+  openWorkspaceConfigFile: (dir) => ipcRenderer.invoke('mcp:openWorkspaceConfigFile', dir),
+  showWorkspaceConfigInFolder: (dir) => ipcRenderer.invoke('mcp:showWorkspaceConfigInFolder', dir),
+  getServers: (scope, workspaceDir) => ipcRenderer.invoke('mcp:getServers', scope, workspaceDir),
+  toggleServer: (name, scope, enabled, workspaceDir) => ipcRenderer.invoke('mcp:toggleServer', { name, scope, enabled, workspaceDir }),
+  saveServer: (data) => ipcRenderer.invoke('mcp:saveServer', data),
+  deleteServer: (name, scope, workspaceDir) => ipcRenderer.invoke('mcp:deleteServer', { name, scope, workspaceDir }),
+  testServer: (name, workspaceDir) => ipcRenderer.invoke('mcp:testServer', name, workspaceDir),
+  getTools: (name) => ipcRenderer.invoke('mcp:getTools', name),
+  getPresets: () => ipcRenderer.invoke('mcp:getPresets'),
+  scanJetBrains: () => ipcRenderer.invoke('mcp:scanJetBrains'),
+  cleanJetBrains: () => ipcRenderer.invoke('mcp:cleanJetBrains'),
+  getBackups: () => ipcRenderer.invoke('mcp:getBackups'),
+  restoreBackup: (id) => ipcRenderer.invoke('mcp:restoreBackup', id),
+  readClipboard: () => ipcRenderer.invoke('mcp:readClipboard'),
+  writeClipboard: (text) => ipcRenderer.invoke('mcp:writeClipboard', text),
+});

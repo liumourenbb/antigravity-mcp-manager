@@ -1,0 +1,32 @@
+{
+  "name": "antigravity-mcp-manager",
+  "version": "1.0.0",
+  "description": "Unified MCP Manager and Dashboard for Google Antigravity",
+  "type": "module",
+  "main": "src/desktop/main.js",
+  "bin": {
+    "agy-mcp": "./bin/cli.js"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "desktop": "electron src/desktop/main.js",
+    "start:desktop": "electron src/desktop/main.js",
+    "ui": "node bin/cli.js ui",
+    "cli": "node bin/cli.js",
+    "test": "node test/test.js",
+    "build:win": "node scripts/build_windows11.js"
+  },
+  "keywords": [
+    "antigravity",
+    "mcp",
+    "model-context-protocol",
+    "dashboard",
+    "cli"
+  ],
+  "author": "Antigravity Pair",
+  "license": "MIT",
+  "devDependencies": {
+    "@electron/packager": "^20.3.0",
+    "electron": "^44.4.5"
+  }
+}
