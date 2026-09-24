@@ -14,7 +14,8 @@
     "ui": "node bin/cli.js ui",
     "cli": "node bin/cli.js",
     "test": "node test/test.js",
-    "build:win": "node scripts/build_windows11.js"
+    "build:win": "node scripts/build_windows11.js",
+    "release": "node scripts/publish_release.js"
   },
   "keywords": [
     "antigravity",
