@@ -493,6 +493,24 @@
           </div>
         </div>
 
+        <!-- LIVE ANTIGRAVITY DETECTOR BANNER -->
+        <div class="p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 flex items-center justify-between transition-all">
+          <div class="flex items-center space-x-2.5">
+            <span class="relative flex h-2.5 w-2.5">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </span>
+            <div class="text-xs">
+              <span class="font-bold text-white">Antigravity 实时运行态：</span>
+              <span id="rules-live-summary" class="text-neutral-300 font-mono">正在连接 Antigravity 实时获取生效规则...</span>
+            </div>
+          </div>
+          <button id="rules-live-refresh-btn" class="px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 text-emerald-300 hover:text-white text-xs font-medium flex items-center space-x-1 border border-emerald-500/30 transition" title="从 Antigravity 运行态实时重新获取最新规则">
+            <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+            <span>实时从 Antigravity 获取</span>
+          </button>
+        </div>
+
         <!-- STATS & BUDGET BAR -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-3.5">
           <div class="fluent-card p-3 flex items-center justify-between">
@@ -614,6 +632,24 @@
               <span>已是最新</span>
             </button>
           </div>
+        </div>
+
+        <!-- LIVE ANTIGRAVITY DETECTOR BANNER -->
+        <div class="p-3 rounded-xl border border-purple-500/20 bg-purple-500/5 flex items-center justify-between transition-all">
+          <div class="flex items-center space-x-2.5">
+            <span class="relative flex h-2.5 w-2.5">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-purple-500"></span>
+            </span>
+            <div class="text-xs">
+              <span class="font-bold text-white">Antigravity 实时运行态：</span>
+              <span id="project-rules-live-summary" class="text-neutral-300 font-mono">正在连接 Antigravity 实时获取生效规则...</span>
+            </div>
+          </div>
+          <button id="project-rules-live-refresh-btn" class="px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 text-purple-300 hover:text-white text-xs font-medium flex items-center space-x-1 border border-purple-500/30 transition" title="从 Antigravity 运行态实时重新获取最新规则">
+            <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+            <span>实时从 Antigravity 获取</span>
+          </button>
         </div>
 
         <!-- STATS CARDS -->

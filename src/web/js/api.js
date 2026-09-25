@@ -235,5 +235,13 @@ const api = {
       body: JSON.stringify({ projectPaths, overwriteExisting })
     });
     return res.json();
+  },
+
+  async getAntigravityLiveRules() {
+    if (window.mcpApi && window.mcpApi.getAntigravityLiveRules) {
+      return window.mcpApi.getAntigravityLiveRules();
+    }
+    const res = await fetch('/api/rules/live');
+    return res.json();
   }
 };

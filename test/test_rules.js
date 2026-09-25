@@ -11,7 +11,8 @@ import {
   getProjectRulesOverview,
   initProjectRules,
   copyGlobalRulesToProject,
-  batchSyncGlobalRules
+  batchSyncGlobalRules,
+  getAntigravityLiveRules
 } from '../src/core/rules.js';
 
 console.log('🧪 Testing Rules module...\n');
@@ -90,6 +91,16 @@ try {
   const batchRes = batchSyncGlobalRules([tempDir], true);
   assert.strictEqual(batchRes.synced, 1, 'batchSyncGlobalRules successfully synced temp workspace');
   console.log('   ✔ Batch Sync test passed\n');
+
+  // 6. Test Real-time Antigravity Live Rules Inspector
+  console.log('6. Testing getAntigravityLiveRules...');
+  const live = getAntigravityLiveRules();
+  console.log(`   Antigravity running: ${live.isAntigravityRunning}, active workspace: ${live.activeWorkspace}`);
+  assert.strictEqual(typeof live.isAntigravityRunning, 'boolean', 'isAntigravityRunning is boolean');
+  assert.ok(live.activeWorkspace.length > 0, 'Active workspace resolved');
+  assert.ok(live.effectiveRule, 'Effective rule object present');
+  console.log(`   Effective rule path: ${live.effectiveRule.filePath} (exists: ${live.effectiveRule.exists})`);
+  console.log('   ✔ Antigravity Live Rules check passed\n');
 } finally {
   fs.rmSync(tempDir, { recursive: true, force: true });
 }

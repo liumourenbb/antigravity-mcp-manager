@@ -17,7 +17,8 @@ import {
   getProjectRulesOverview,
   initProjectRules,
   copyGlobalRulesToProject,
-  batchSyncGlobalRules
+  batchSyncGlobalRules,
+  getAntigravityLiveRules
 } from '../core/rules.js';
 
 /**
@@ -313,6 +314,14 @@ function registerRulesBasicIpcHandlers() {
       const p = resolveRulesPath(scope, projectDir);
       await shell.openPath(p);
       return { ok: true, filePath: p };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('mcp:getAntigravityLiveRules', async () => {
+    try {
+      return { ok: true, live: getAntigravityLiveRules() };
     } catch (err) {
       return { ok: false, error: err.message };
     }

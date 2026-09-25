@@ -48,6 +48,15 @@ const RulesManager = {
       presetsBtn.addEventListener('click', () => this.showPresetsModal());
     }
 
+    // Live refresh button
+    const liveRefreshBtn = document.getElementById('rules-live-refresh-btn');
+    if (liveRefreshBtn) {
+      liveRefreshBtn.addEventListener('click', () => {
+        showToast('正在从 Antigravity 实时重新获取生效规则...', 'info');
+        this.load();
+      });
+    }
+
     // Textarea dirty state listener
     const textarea = document.getElementById('rules-editor-textarea');
     if (textarea) {
@@ -111,8 +120,31 @@ const RulesManager = {
       this.isDirty = false;
       this.render();
       this.updateSaveButtonState(false);
+      await this.checkLiveStatus();
     } catch (err) {
       showToast('获取规则失败: ' + err.message, 'error');
+    }
+  },
+
+  async checkLiveStatus() {
+    try {
+      const res = await api.getAntigravityLiveRules();
+      if (!res || !res.ok || !res.live) return;
+      const live = res.live;
+      const summaryEl = document.getElementById('rules-live-summary');
+      if (!summaryEl) return;
+
+      const runBadge = live.isAntigravityRunning
+        ? '<span class="text-emerald-400 font-semibold">● 进程在线</span>'
+        : '<span class="text-neutral-400 font-semibold">○ 离线</span>';
+
+      const ruleText = live.effectiveRule.exists
+        ? `<span class="text-purple-300 font-semibold">${escapeHtml(live.effectiveRule.filePath)} (${live.effectiveRule.totalRules}条)</span>`
+        : '<span class="text-amber-400 font-semibold">未检测到生效规则</span>';
+
+      summaryEl.innerHTML = `${runBadge} | 活动工程: <span class="text-white">${escapeHtml(live.activeWorkspace)}</span> | 实时生效: ${ruleText}`;
+    } catch (e) {
+      console.warn('Live rules status check failed:', e);
     }
   },
 

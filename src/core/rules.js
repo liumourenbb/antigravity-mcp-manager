@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { execSync } from 'node:child_process';
 import { PATHS, ensureDir, getDefaultWorkspaceDir } from './paths.js';
 import { createBackup } from './backup.js';
 import { listAntigravityProjects } from './workspaces.js';
@@ -429,5 +430,59 @@ export function batchSyncGlobalRules(projectPaths = null, overwriteExisting = fa
     synced: results.filter(r => r.status === 'synced').length,
     skipped: results.filter(r => r.status === 'skipped').length,
     details: results
+  };
+}
+
+/**
+ * Checks whether Antigravity desktop application is currently running.
+ */
+function isAntigravityRunning() {
+  if (process.platform === 'win32') {
+    try {
+      const out = execSync('tasklist /FI "IMAGENAME eq Antigravity.exe" /NH', {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+        timeout: 1500
+      });
+      return out.includes('Antigravity.exe');
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
+/**
+ * Gets real-time Antigravity effective rules state.
+ * Directly inspects active workspace and live rule inheritance tree.
+ */
+export function getAntigravityLiveRules() {
+  const activeWorkspace = getDefaultWorkspaceDir();
+  const running = isAntigravityRunning();
+  const activeRules = loadRules('workspace', activeWorkspace);
+  const globalRules = loadRules('global');
+
+  return {
+    isAntigravityRunning: running,
+    activeWorkspace,
+    effectiveRule: {
+      scope: 'workspace',
+      filePath: activeRules.resolvedPath || activeRules.filePath,
+      exists: activeRules.exists,
+      isInherited: activeRules.isInherited,
+      inheritedFrom: activeRules.inheritedFrom,
+      size: activeRules.size,
+      updatedAt: activeRules.updatedAt,
+      totalRules: activeRules.summary.totalRules,
+      charCount: activeRules.summary.charCount,
+      sections: activeRules.sections,
+      content: activeRules.content
+    },
+    globalRulesState: {
+      exists: globalRules.exists,
+      isDeleted: !globalRules.exists || globalRules.content.length === 0,
+      charCount: globalRules.summary.charCount
+    },
+    timestamp: new Date().toISOString()
   };
 }

@@ -7,7 +7,8 @@ import {
   getProjectRulesOverview,
   initProjectRules,
   copyGlobalRulesToProject,
-  batchSyncGlobalRules
+  batchSyncGlobalRules,
+  getAntigravityLiveRules
 } from './rules.js';
 
 /**
@@ -42,6 +43,13 @@ async function handleQueryRulesRoutes(pathname, parsedUrl, sendJson) {
     const projectDir = parsedUrl.searchParams.get('projectDir') || null;
     const files = listModularRules(scope, projectDir);
     sendJson(200, { ok: true, files });
+    return true;
+  }
+
+  // 5. GET /api/rules/live (Live Antigravity rules status)
+  if (pathname === '/api/rules/live') {
+    const live = getAntigravityLiveRules();
+    sendJson(200, { ok: true, live });
     return true;
   }
 

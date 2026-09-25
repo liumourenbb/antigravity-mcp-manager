@@ -33,4 +33,5 @@ contextBridge.exposeInMainWorld('mcpApi', {
   initProjectRules: (projectDir, templateId) => ipcRenderer.invoke('mcp:initProjectRules', { projectDir, templateId }),
   copyGlobalRulesToProject: (projectDir) => ipcRenderer.invoke('mcp:copyGlobalRulesToProject', { projectDir }),
   batchSyncGlobalRules: (projectPaths, overwriteExisting) => ipcRenderer.invoke('mcp:batchSyncGlobalRules', { projectPaths, overwriteExisting }),
+  getAntigravityLiveRules: () => ipcRenderer.invoke('mcp:getAntigravityLiveRules'),
 });
