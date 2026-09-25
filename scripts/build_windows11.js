@@ -17,7 +17,6 @@ function prepareDistributionDir(targetDist) {
   }
   fs.mkdirSync(targetDist, { recursive: true });
 
-  // Source candidates for offline Electron runtime
   const localElectronDist = path.join(rootDir, 'node_modules', 'electron', 'dist');
   const existingManagerDist = path.join(rootDir, 'dist', 'Antigravity-MCP-Manager');
 
@@ -26,10 +25,9 @@ function prepareDistributionDir(targetDist) {
     throw new Error('未找到本地已安装的 Electron 运行时，无法离线构建 windows11.exe');
   }
 
-  console.log(`[1/4] 从本地运行时镜像复制二进制依赖: ${sourceDir}`);
+  console.log(`[1/5] 从本地运行时镜像复制二进制依赖: ${sourceDir}`);
   fs.cpSync(sourceDir, targetDist, { recursive: true });
 
-  // Ensure executable is named windows11.exe
   const candidates = ['electron.exe', 'Antigravity-MCP-Manager.exe'];
   for (const c of candidates) {
     const srcExe = path.join(targetDist, c);
@@ -47,21 +45,19 @@ function prepareDistributionDir(targetDist) {
  * Copies latest application source code into resources/app
  */
 function syncAppResources(targetDist) {
-  console.log('[2/4] 同步最新业务代码与前端模块至 resources/app...');
+  console.log('[2/5] 同步最新业务代码与前端模块至 resources/app...');
   const appDir = path.join(targetDist, 'resources', 'app');
   if (fs.existsSync(appDir)) {
     fs.rmSync(appDir, { recursive: true, force: true });
   }
   fs.mkdirSync(appDir, { recursive: true });
 
-  // Copy src, bin, and package.json
   fs.cpSync(path.join(rootDir, 'src'), path.join(appDir, 'src'), { recursive: true });
   if (fs.existsSync(path.join(rootDir, 'bin'))) {
     fs.cpSync(path.join(rootDir, 'bin'), path.join(appDir, 'bin'), { recursive: true });
   }
   fs.copyFileSync(path.join(rootDir, 'package.json'), path.join(appDir, 'package.json'));
 
-  // Remove default_app.asar if present to prioritize resources/app
   const defaultAsar = path.join(targetDist, 'resources', 'default_app.asar');
   if (fs.existsSync(defaultAsar)) {
     try { fs.unlinkSync(defaultAsar); } catch {}
@@ -69,10 +65,38 @@ function syncAppResources(targetDist) {
 }
 
 /**
+ * Emits portable silent launcher scripts (vbs + bat) into the distribution directory.
+ */
+function emitDistributionLaunchers(targetDist) {
+  console.log('[3/5] 在分发包目录生成便携启动脚本 (launch-desktop.vbs / .bat)...');
+  const vbsContent = [
+    'Set WshShell = CreateObject("WScript.Shell")',
+    'Set fso = CreateObject("Scripting.FileSystemObject")',
+    'strCurDir = fso.GetParentFolderName(WScript.ScriptFullName)',
+    'strExe = strCurDir & "\\windows11.exe"',
+    'If fso.FileExists(strExe) Then',
+    '    WshShell.Run """" & strExe & """", 0, False',
+    'End If',
+    ''
+  ].join('\r\n');
+
+  const batContent = [
+    '@echo off',
+    'title Antigravity MCP Manager',
+    'cd /d "%~dp0"',
+    'start "" "%~dp0windows11.exe"',
+    ''
+  ].join('\r\n');
+
+  fs.writeFileSync(path.join(targetDist, 'launch-desktop.vbs'), vbsContent, 'utf8');
+  fs.writeFileSync(path.join(targetDist, 'launch-desktop.bat'), batContent, 'utf8');
+}
+
+/**
  * Compiles a native lightweight windows11.exe launcher in the project root
  */
 function compileRootLauncher(rootPath, distExePath) {
-  console.log('[3/4] 在项目根目录编译生成原生快速入口 windows11.exe...');
+  console.log('[4/5] 在项目根目录编译生成原生快速入口 windows11.exe...');
   const cscPath = 'C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe';
   const rootExe = path.join(rootPath, 'windows11.exe');
 
@@ -129,6 +153,7 @@ function main() {
   try {
     prepareDistributionDir(distDir);
     syncAppResources(distDir);
+    emitDistributionLaunchers(distDir);
 
     const distExe = path.join(distDir, 'windows11.exe');
     compileRootLauncher(rootDir, distExe);
@@ -139,7 +164,9 @@ function main() {
     console.log(`\n🎉 [BUILD COMPLETE] windows11.exe 全部构建完成！(耗时 ${costSec}s)`);
     console.log(`   1. 独立完整分发目录: ${distDir}`);
     console.log(`      核心程序: ${distExe} (${sizeMb} MB)`);
+    console.log(`      静默启动脚本: ${path.join(distDir, 'launch-desktop.vbs')}`);
     console.log(`   2. 项目根目录一键启动器: ${path.join(rootDir, 'windows11.exe')}`);
+    console.log(`      项目根目录静默启动: ${path.join(rootDir, 'launch-desktop.vbs')}`);
   } catch (err) {
     console.error('❌ 构建失败:', err.message);
     process.exit(1);
