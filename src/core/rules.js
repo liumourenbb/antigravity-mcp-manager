@@ -70,6 +70,30 @@ export function resolveRulesPath(scope = 'global', projectDir = null) {
 }
 
 /**
+ * Traverses upwards from projectDir to find any inherited workspace rules file.
+ */
+export function findWorkspaceRulesFile(projectDir) {
+  if (!projectDir) return null;
+  let curr = path.resolve(projectDir);
+  const root = path.parse(curr).root;
+
+  while (true) {
+    const candidates = [
+      path.join(curr, 'AGENTS.md'),
+      path.join(curr, 'GEMINI.md')
+    ];
+    for (const c of candidates) {
+      if (fs.existsSync(c)) return c;
+    }
+    if (fs.existsSync(path.join(curr, '.git')) || curr === root) break;
+    const parent = path.dirname(curr);
+    if (parent === curr) break;
+    curr = parent;
+  }
+  return null;
+}
+
+/**
  * Parses markdown text into discrete rule items.
  */
 export function parseRuleSections(markdown) {
@@ -115,14 +139,28 @@ export function parseRuleSections(markdown) {
  * Loads rules info and parsed structure for global or project scope.
  */
 export function loadRules(scope = 'global', projectDir = null) {
-  const filePath = resolveRulesPath(scope, projectDir);
-  const exists = fs.existsSync(filePath);
+  const localPath = resolveRulesPath(scope, projectDir);
+  let targetPath = localPath;
+  let isInherited = false;
+  let inheritedFrom = null;
 
+  if (!fs.existsSync(targetPath) && scope === 'workspace' && projectDir) {
+    const parentRules = findWorkspaceRulesFile(projectDir);
+    if (parentRules) {
+      targetPath = parentRules;
+      isInherited = true;
+      inheritedFrom = parentRules;
+    }
+  }
+
+  const exists = fs.existsSync(targetPath);
   if (!exists) {
     return {
       scope,
-      filePath,
+      filePath: localPath,
       exists: false,
+      isInherited: false,
+      inheritedFrom: null,
       size: 0,
       updatedAt: null,
       content: '',
@@ -131,14 +169,17 @@ export function loadRules(scope = 'global', projectDir = null) {
     };
   }
 
-  const stat = fs.statSync(filePath);
-  const content = fs.readFileSync(filePath, 'utf8');
+  const stat = fs.statSync(targetPath);
+  const content = fs.readFileSync(targetPath, 'utf8');
   const sections = parseRuleSections(content);
 
   return {
     scope,
-    filePath,
+    filePath: localPath,
+    resolvedPath: targetPath,
     exists: true,
+    isInherited,
+    inheritedFrom,
     size: stat.size,
     updatedAt: stat.mtime.toISOString(),
     content,
@@ -233,7 +274,10 @@ export function getProjectRulesOverview() {
       source: proj.source,
       isCurrent: proj.isCurrent,
       hasRules: rules.exists,
+      isInherited: rules.isInherited || false,
+      inheritedFrom: rules.inheritedFrom || null,
       filePath: rules.filePath,
+      resolvedPath: rules.resolvedPath || rules.filePath,
       size: rules.size,
       updatedAt: rules.updatedAt,
       totalRules: rules.summary.totalRules,

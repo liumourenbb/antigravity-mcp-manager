@@ -175,9 +175,11 @@ const ProjectRulesManager = {
               ${proj.isCurrent ? '<span class="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-semibold shrink-0">当前</span>' : ''}
             </div>
             <span class="text-[10px] px-2 py-0.5 rounded-full font-mono shrink-0 ${
-              proj.hasRules ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-neutral-800 text-neutral-400'
+              !proj.hasRules ? 'bg-neutral-800 text-neutral-400'
+              : proj.isInherited ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+              : 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
             }">
-              ${proj.hasRules ? `${proj.totalRules} 条规则` : '未配置'}
+              ${!proj.hasRules ? '未配置' : proj.isInherited ? `继承上级 (${proj.totalRules}条)` : `专属配置 (${proj.totalRules}条)`}
             </span>
           </div>
 
@@ -185,6 +187,7 @@ const ProjectRulesManager = {
 
           ${proj.hasRules ? `
             <div class="flex flex-wrap gap-1.5 mb-3">
+              ${proj.isInherited ? '<span class="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25">继承上级</span>' : ''}
               ${titles || '<span class="text-[10px] text-neutral-500">已就绪</span>'}
             </div>
           ` : `
@@ -200,6 +203,12 @@ const ProjectRulesManager = {
           </span>
           <div class="flex items-center space-x-1.5" onclick="event.stopPropagation()">
             ${proj.hasRules ? `
+              ${proj.isInherited ? `
+                <button class="px-2 py-1 text-[11px] font-medium rounded-md bg-blue-600/30 hover:bg-blue-600/50 text-blue-200 transition"
+                        onclick="ProjectRulesManager.quickInit('${escapeHtml(proj.path)}')">
+                  固化为专属
+                </button>
+              ` : ''}
               <button class="px-2.5 py-1 text-[11px] font-medium rounded-md bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 transition"
                       onclick="ProjectRulesManager.selectProject('${escapeHtml(proj.path)}')">
                 进入编辑
@@ -249,13 +258,18 @@ const ProjectRulesManager = {
   renderStudio(rules) {
     const titleEl = document.getElementById('project-rules-studio-title');
     if (titleEl) {
-      titleEl.textContent = `${this.selectedProject.name} 项目规则工作台`;
+      if (rules.isInherited) {
+        titleEl.innerHTML = `<span>${escapeHtml(this.selectedProject.name)} 项目规则工作台</span> <span class="px-2 py-0.5 rounded text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/30">继承自父级工作区</span>`;
+      } else {
+        titleEl.innerHTML = `<span>${escapeHtml(this.selectedProject.name)} 项目专属规则工作台</span> <span class="px-2 py-0.5 rounded text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/30">专属配置</span>`;
+      }
     }
 
     const pathEl = document.getElementById('project-rules-studio-path');
     if (pathEl) {
-      pathEl.textContent = rules.filePath;
-      pathEl.title = rules.filePath;
+      const displayPath = rules.isInherited ? `${rules.filePath} (来源: ${rules.inheritedFrom})` : rules.filePath;
+      pathEl.textContent = displayPath;
+      pathEl.title = displayPath;
     }
 
     const textarea = document.getElementById('project-rules-textarea');
