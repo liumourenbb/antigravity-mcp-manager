@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { PATHS, ensureDir } from './paths.js';
 import { createBackup } from './backup.js';
+import { listAntigravityProjects } from './workspaces.js';
 
 export const PRESET_RULES = [
   {
@@ -217,3 +218,72 @@ export function listModularRules(scope = 'global', projectDir = null) {
     };
   });
 }
+
+/**
+ * Gets aggregated project rules overview across all detected Antigravity projects.
+ */
+export function getProjectRulesOverview() {
+  const projects = listAntigravityProjects();
+  const list = projects.map(proj => {
+    const rules = loadRules('workspace', proj.path);
+    return {
+      id: proj.id,
+      name: proj.name,
+      path: proj.path,
+      source: proj.source,
+      isCurrent: proj.isCurrent,
+      hasRules: rules.exists,
+      filePath: rules.filePath,
+      size: rules.size,
+      updatedAt: rules.updatedAt,
+      totalRules: rules.summary.totalRules,
+      charCount: rules.summary.charCount,
+      isOverBudget: rules.summary.isOverBudget,
+      summaryTitles: rules.sections.slice(0, 3).map(s => s.title)
+    };
+  });
+
+  return {
+    totalProjects: list.length,
+    configuredProjects: list.filter(p => p.hasRules).length,
+    unconfiguredProjects: list.filter(p => !p.hasRules).length,
+    overBudgetProjects: list.filter(p => p.isOverBudget).length,
+    projects: list
+  };
+}
+
+/**
+ * Initializes a default rules file (AGENTS.md) for a workspace project.
+ */
+export function initProjectRules(projectDir, templateId = 'default') {
+  if (!projectDir || !fs.existsSync(projectDir)) {
+    throw new Error('Project directory does not exist');
+  }
+
+  const preset = PRESET_RULES.find(p => p.id === templateId) || PRESET_RULES[0];
+  const initialContent = `# ${path.basename(projectDir)} 项目规则 (Project Rules)\n\n${preset.content}\n`;
+  return saveRules('workspace', projectDir, initialContent);
+}
+
+/**
+ * Copies the global AGENTS.md rules into a target workspace project.
+ */
+export function copyGlobalRulesToProject(projectDir) {
+  if (!projectDir || !fs.existsSync(projectDir)) {
+    throw new Error('Project directory does not exist');
+  }
+
+  const globalRules = loadRules('global');
+  if (!globalRules.exists || !globalRules.content) {
+    throw new Error('Global rules file is empty or does not exist');
+  }
+
+  const projectName = path.basename(projectDir);
+  const header = `# ${projectName} 项目规则 (Project Rules - 继承自全局)\n\n`;
+  const content = globalRules.content.startsWith('#')
+    ? header + globalRules.content.replace(/^#\s+[^\n]+\n+/, '')
+    : header + globalRules.content;
+
+  return saveRules('workspace', projectDir, content);
+}
+

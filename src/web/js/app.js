@@ -76,5 +76,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (window.RulesManager && typeof RulesManager.init === 'function') {
     RulesManager.init();
   }
+  if (window.ProjectRulesManager && typeof ProjectRulesManager.init === 'function') {
+    ProjectRulesManager.init();
+  }
   if (window.lucide) lucide.createIcons();
 });

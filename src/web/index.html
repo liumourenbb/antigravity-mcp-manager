@@ -243,8 +243,14 @@
 
           <button onclick="switchTab('rules')" id="nav-rules" class="nav-item relative w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-win-textSecondary hover:bg-white/5 hover:text-white transition text-left">
             <i data-lucide="scroll-text" class="w-4 h-4 text-emerald-400"></i>
-            <span>规则管理 (Rules)</span>
-            <span class="ml-auto text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-mono">规范</span>
+            <span>全局系统规则</span>
+            <span class="ml-auto text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-mono">全局</span>
+          </button>
+
+          <button onclick="switchTab('project-rules')" id="nav-project-rules" class="nav-item relative w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-win-textSecondary hover:bg-white/5 hover:text-white transition text-left">
+            <i data-lucide="folder-code" class="w-4 h-4 text-purple-400"></i>
+            <span>项目规则管理</span>
+            <span class="ml-auto text-[10px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-mono">项目</span>
           </button>
 
           <button onclick="switchTab('presets')" id="nav-presets" class="nav-item relative w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-win-textSecondary hover:bg-white/5 hover:text-white transition text-left">
@@ -567,6 +573,175 @@
                 <span>安全保障：每次保存前自动生成历史快照，杜绝误操作</span>
               </span>
               <span class="text-[10px] text-neutral-500 font-mono">UTF-8 • Markdown • Progressive Disclosure</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 6: PROJECT RULES MANAGEMENT VIEW -->
+      <section id="view-project-rules" class="hidden space-y-5">
+        <!-- COMMAND HEADER -->
+        <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+          <div>
+            <div class="flex items-center space-x-2">
+              <h2 class="text-xl font-bold tracking-tight text-white">Antigravity 项目规则管理 (Project Rules)</h2>
+              <span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                多工程规则治理中枢
+              </span>
+            </div>
+            <p class="text-xs text-win-textSecondary mt-0.5">跨工作区治理项目专属规范，支持项目 AGENTS.md 快速初始化、大纲定位与全局规范一键继承</p>
+          </div>
+
+          <div class="flex items-center space-x-2.5">
+            <button id="project-rules-refresh-btn" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white text-xs font-semibold flex items-center space-x-1.5 border border-win-border transition">
+              <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+              <span>刷新项目</span>
+            </button>
+            <button id="project-rules-copy-global-btn" class="px-3 py-1.5 rounded-lg bg-blue-600/30 hover:bg-blue-600/50 text-blue-200 hover:text-white text-xs font-semibold flex items-center space-x-1.5 border border-blue-500/30 shadow-sm transition">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+              <span>从全局继承到当前工程</span>
+            </button>
+            <button id="project-rules-open-file-btn" title="在系统外部编辑器中打开当前工程规则" class="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white text-xs font-medium flex items-center space-x-1 border border-win-border transition">
+              <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+              <span>外部打开</span>
+            </button>
+            <button id="project-rules-save-btn" class="px-3.5 py-1.5 rounded-lg bg-[#252528] text-neutral-300 hover:bg-[#303034] text-xs font-semibold flex items-center space-x-1.5 shadow-sm transition">
+              <i data-lucide="check" class="w-3.5 h-3.5 text-purple-400"></i>
+              <span>已是最新</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- STATS CARDS -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+          <div class="fluent-card p-3.5 flex items-center justify-between">
+            <div>
+              <p class="text-[11px] text-win-textSecondary font-medium">识别项目总数</p>
+              <p id="statProjRulesTotal" class="text-2xl font-bold text-white mt-0.5 tracking-tight">-</p>
+            </div>
+            <div class="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+              <i data-lucide="folder-git-2" class="w-4.5 h-4.5"></i>
+            </div>
+          </div>
+
+          <div class="fluent-card p-3.5 flex items-center justify-between">
+            <div>
+              <p class="text-[11px] text-emerald-400/90 font-medium">已配置专属规则</p>
+              <p id="statProjRulesConfigured" class="text-2xl font-bold text-emerald-400 mt-0.5 tracking-tight">-</p>
+            </div>
+            <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+              <i data-lucide="check-circle-2" class="w-4.5 h-4.5"></i>
+            </div>
+          </div>
+
+          <div class="fluent-card p-3.5 flex items-center justify-between">
+            <div>
+              <p class="text-[11px] text-amber-400/90 font-medium">继承全局 / 未配置</p>
+              <p id="statProjRulesUnconfigured" class="text-2xl font-bold text-amber-400 mt-0.5 tracking-tight">-</p>
+            </div>
+            <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+              <i data-lucide="git-fork" class="w-4.5 h-4.5"></i>
+            </div>
+          </div>
+
+          <div class="fluent-card p-3.5 flex items-center justify-between">
+            <div>
+              <p class="text-[11px] text-blue-400/90 font-medium">专属规则就绪率</p>
+              <p id="statProjRulesRate" class="text-2xl font-bold text-blue-400 mt-0.5 tracking-tight">-</p>
+            </div>
+            <div class="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+              <i data-lucide="percent" class="w-4.5 h-4.5"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- SEARCH AND QUICK SWITCH BAR -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-xl bg-[#1c1c1f] border border-win-border">
+          <div class="relative w-full sm:w-80">
+            <i data-lucide="search" class="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+            <input type="text" id="project-rules-search" placeholder="搜索项目名称或路径..." class="w-full bg-[#121214] border border-[#2c2c30] rounded-lg pl-9 pr-3 py-1.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-purple-500 transition">
+          </div>
+
+          <div class="flex items-center space-x-2 w-full sm:w-auto">
+            <span class="text-xs text-neutral-400 shrink-0">选择工作台编辑项目:</span>
+            <select id="project-rules-workspace-select" class="bg-[#121214] border border-[#2c2c30] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500 transition font-medium">
+              <!-- Dynamically populated options -->
+            </select>
+          </div>
+        </div>
+
+        <!-- PROJECT CARDS GRID -->
+        <div>
+          <div class="flex items-center justify-between mb-2.5">
+            <span class="text-xs font-bold text-neutral-300 flex items-center space-x-1.5">
+              <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-purple-400"></i>
+              <span>工程规则列表与治理卡片</span>
+            </span>
+            <span class="text-[11px] text-win-textTertiary">点击卡片可快速载入下方编辑器</span>
+          </div>
+          <div id="project-rules-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            <!-- Dynamically populated project cards -->
+          </div>
+        </div>
+
+        <!-- PROJECT RULES STUDIO -->
+        <div class="fluent-card p-4 space-y-3.5 mt-2 border-purple-500/30">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-win-border gap-2">
+            <div>
+              <h3 id="project-rules-studio-title" class="text-sm font-bold text-white flex items-center space-x-2">
+                <span>项目专属规则工作台</span>
+              </h3>
+              <p class="text-[11px] font-mono text-purple-300/80 truncate mt-0.5" id="project-rules-studio-path">-</p>
+            </div>
+
+            <!-- STUDIO STATS & BUDGET -->
+            <div class="flex items-center space-x-4 text-xs">
+              <div class="flex items-center space-x-1.5 text-neutral-300">
+                <span class="text-neutral-500">条目:</span>
+                <span id="project-rules-stat-count" class="font-bold text-white font-mono">-</span>
+              </div>
+              <div class="flex items-center space-x-1.5 text-neutral-300">
+                <span class="text-neutral-500">字符:</span>
+                <span id="project-rules-stat-chars" class="font-bold text-white font-mono">-</span>
+              </div>
+              <div class="w-36">
+                <div class="flex justify-between text-[10px] text-neutral-400 mb-1">
+                  <span>预算</span>
+                  <span id="project-rules-budget-text" class="text-purple-400 font-mono">-</span>
+                </div>
+                <div class="w-full bg-[#18181b] h-1.5 rounded-full overflow-hidden border border-[#2a2a2e]">
+                  <div id="project-rules-budget-bar" class="h-full bg-purple-500 rounded-full transition-all" style="width: 0%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- DUAL PANE STUDIO: OUTLINE + EDITOR -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start min-h-[460px]">
+            <!-- LEFT: OUTLINE (4 COLS) -->
+            <div class="lg:col-span-4 bg-[#141416] border border-[#26262a] rounded-xl p-3 flex flex-col h-[480px]">
+              <div class="flex items-center justify-between pb-2 mb-2 border-b border-[#26262a]">
+                <span class="text-xs font-bold text-neutral-300 flex items-center space-x-1">
+                  <i data-lucide="list-tree" class="w-3.5 h-3.5 text-purple-400"></i>
+                  <span>项目规则大纲</span>
+                </span>
+                <span class="text-[10px] text-neutral-500">快速跳转</span>
+              </div>
+              <div id="project-rules-outline-list" class="space-y-2 overflow-y-auto flex-1 pr-1">
+                <!-- Dynamically populated outline items -->
+              </div>
+            </div>
+
+            <!-- RIGHT: EDITOR (8 COLS) -->
+            <div class="lg:col-span-8 flex flex-col h-[480px]">
+              <textarea id="project-rules-textarea" spellcheck="false" placeholder="# 项目规则 (Project Rules)..." class="w-full flex-1 bg-[#121214] border border-[#2a2a2e] rounded-xl p-4 text-neutral-100 font-mono text-xs leading-relaxed focus:outline-none focus:border-purple-500/80 focus:ring-1 focus:ring-purple-500/30 transition-all resize-none shadow-inner"></textarea>
+              <div class="flex items-center justify-between pt-2.5 text-[11px] text-neutral-500">
+                <span class="flex items-center space-x-1 text-purple-400/90 font-medium">
+                  <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                  <span>保存时自动生成安全快照备份</span>
+                </span>
+                <span class="font-mono text-[10px]">Ctrl+S 保存 • UTF-8</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1031,6 +1206,7 @@
   <script src="js/server-form-manager.js"></script>
   <script src="js/diagnostics-presets.js"></script>
   <script src="js/rules-manager.js"></script>
+  <script src="js/project-rules-manager.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

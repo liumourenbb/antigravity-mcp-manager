@@ -68,6 +68,7 @@ const targetFiles = [
   'src/web/js/server-form-manager.js',
   'src/web/js/diagnostics-presets.js',
   'src/web/js/rules-manager.js',
+  'src/web/js/project-rules-manager.js',
   'src/web/js/app.js',
   'src/web/index.html'
 ];

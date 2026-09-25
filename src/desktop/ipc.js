@@ -7,7 +7,17 @@ import { scanJetBrainsBridges, cleanStaleJetBrainsBridges } from '../core/jetbra
 import { listBackups, restoreBackup } from '../core/backup.js';
 import { PATHS, getDefaultWorkspaceDir, saveActiveWorkspace, getRecentWorkspaces } from '../core/paths.js';
 import { listAntigravityProjects, syncWorkspaceToAntigravity, initWorkspaceMcpConfig, getWorkspaceConfigFile } from '../core/workspaces.js';
-import { PRESET_RULES, loadRules, saveRules, appendPresetToRules, listModularRules, resolveRulesPath } from '../core/rules.js';
+import {
+  PRESET_RULES,
+  loadRules,
+  saveRules,
+  appendPresetToRules,
+  listModularRules,
+  resolveRulesPath,
+  getProjectRulesOverview,
+  initProjectRules,
+  copyGlobalRulesToProject
+} from '../core/rules.js';
 
 /**
  * Registers workspace query and selection IPC handlers.
@@ -302,6 +312,30 @@ function registerRulesIpcHandlers() {
       const p = resolveRulesPath(scope, projectDir);
       await shell.openPath(p);
       return { ok: true, filePath: p };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('mcp:getProjectRulesOverview', async () => {
+    try {
+      return { ok: true, ...getProjectRulesOverview() };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('mcp:initProjectRules', async (event, { projectDir, templateId } = {}) => {
+    try {
+      return { ok: true, result: initProjectRules(projectDir, templateId) };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('mcp:copyGlobalRulesToProject', async (event, { projectDir } = {}) => {
+    try {
+      return { ok: true, result: copyGlobalRulesToProject(projectDir) };
     } catch (err) {
       return { ok: false, error: err.message };
     }

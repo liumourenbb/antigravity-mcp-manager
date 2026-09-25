@@ -191,5 +191,37 @@ const api = {
       return window.mcpApi.openRulesFile(scope, projectDir);
     }
     return { ok: false, error: '当前环境不支持直接打开文件' };
+  },
+
+  async getProjectRulesOverview() {
+    if (window.mcpApi && window.mcpApi.getProjectRulesOverview) {
+      return window.mcpApi.getProjectRulesOverview();
+    }
+    const res = await fetch('/api/rules/projects');
+    return res.json();
+  },
+
+  async initProjectRules(projectDir, templateId) {
+    if (window.mcpApi && window.mcpApi.initProjectRules) {
+      return window.mcpApi.initProjectRules(projectDir, templateId);
+    }
+    const res = await fetch('/api/rules/init-project', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectDir, templateId })
+    });
+    return res.json();
+  },
+
+  async copyGlobalRulesToProject(projectDir) {
+    if (window.mcpApi && window.mcpApi.copyGlobalRulesToProject) {
+      return window.mcpApi.copyGlobalRulesToProject(projectDir);
+    }
+    const res = await fetch('/api/rules/copy-global', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectDir })
+    });
+    return res.json();
   }
 };

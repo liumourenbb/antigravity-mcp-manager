@@ -77,30 +77,42 @@ async function deleteExistingAsset(token, release, assetName) {
 function uploadAssetWithCurl(token, uploadUrlTemplate, filePath, assetName) {
   const cleanUrl = uploadUrlTemplate.replace(/\{.*?\}$/, '') + `?name=${encodeURIComponent(assetName)}`;
   const fileStat = fs.statSync(filePath);
-  console.log(`Uploading ${assetName} (${(fileStat.size / (1024 * 1024)).toFixed(2)} MB) via curl...`);
+  console.log(`Uploading ${assetName} (${(fileStat.size / (1024 * 1024)).toFixed(2)} MB)...`);
+
+  const fileDir = path.dirname(filePath);
+  const baseName = path.basename(filePath);
 
   const args = [
+    '-s',
+    '-S',
     '--retry', '3',
-    '--retry-delay', '3',
-    '-X', 'POST',
+    '--retry-delay', '5',
     '-H', 'Accept: application/vnd.github+json',
     '-H', `Authorization: Bearer ${token}`,
     '-H', 'Content-Type: application/zip',
-    '--data-binary', `@${filePath}`,
+    '-T', baseName,
     cleanUrl
   ];
 
-  const res = spawnSync('curl.exe', args, { encoding: 'utf8' });
+  const res = spawnSync('curl.exe', args, { cwd: fileDir, encoding: 'utf8' });
   if (res.status !== 0) {
-    throw new Error(`curl upload failed with code ${res.status}: ${res.stderr || res.stdout}`);
+    throw new Error(`curl upload failed [code ${res.status}]: ${res.stderr || res.stdout}`);
   }
-  try {
-    const json = JSON.parse(res.stdout);
-    if (json.browser_download_url) {
-      console.log(`Asset uploaded successfully: ${json.browser_download_url}`);
-      return json;
+
+  if (res.stdout) {
+    try {
+      const json = JSON.parse(res.stdout);
+      if (json.browser_download_url) {
+        console.log(`Asset uploaded successfully: ${json.browser_download_url}`);
+        return json;
+      }
+      if (json.message) {
+        console.error(`GitHub API response: ${json.message}`);
+      }
+    } catch {
+      console.log('curl output:', res.stdout.slice(0, 300));
     }
-  } catch {}
+  }
   return { ok: true };
 }
 

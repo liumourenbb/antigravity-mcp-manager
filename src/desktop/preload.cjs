@@ -29,4 +29,7 @@ contextBridge.exposeInMainWorld('mcpApi', {
   applyPresetRule: (scope, projectDir, presetId) => ipcRenderer.invoke('mcp:applyPresetRule', { scope, projectDir, presetId }),
   getModularRules: (scope, projectDir) => ipcRenderer.invoke('mcp:getModularRules', { scope, projectDir }),
   openRulesFile: (scope, projectDir) => ipcRenderer.invoke('mcp:openRulesFile', { scope, projectDir }),
+  getProjectRulesOverview: () => ipcRenderer.invoke('mcp:getProjectRulesOverview'),
+  initProjectRules: (projectDir, templateId) => ipcRenderer.invoke('mcp:initProjectRules', { projectDir, templateId }),
+  copyGlobalRulesToProject: (projectDir) => ipcRenderer.invoke('mcp:copyGlobalRulesToProject', { projectDir }),
 });

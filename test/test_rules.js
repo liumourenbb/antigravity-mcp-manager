@@ -7,7 +7,10 @@ import {
   parseRuleSections,
   loadRules,
   saveRules,
-  appendPresetToRules
+  appendPresetToRules,
+  getProjectRulesOverview,
+  initProjectRules,
+  copyGlobalRulesToProject
 } from '../src/core/rules.js';
 
 console.log('🧪 Testing Rules module...\n');
@@ -61,6 +64,23 @@ try {
   assert.strictEqual(appendRes.ok, true, 'Appended preset rule succeeded');
   assert.ok(appendRes.sections.some(s => s.title.includes('代码精简')), 'Preset appended successfully');
   console.log('   ✔ Save & Append preset passed\n');
+
+  // 5. Test Project Rules Overview & Initialization
+  console.log('5. Testing Project Rules Overview & Initialization...');
+  const initRes = initProjectRules(tempDir, 'rule-7-concise');
+  assert.strictEqual(initRes.ok, true, 'initProjectRules succeeded');
+  assert.ok(fs.existsSync(path.join(tempDir, 'AGENTS.md')), 'AGENTS.md created in temp workspace');
+
+  const copyRes = copyGlobalRulesToProject(tempDir);
+  assert.strictEqual(copyRes.ok, true, 'copyGlobalRulesToProject succeeded');
+  const copiedRules = loadRules('workspace', tempDir);
+  assert.ok(copiedRules.content.includes('继承自全局'), 'Inherited global rules header present');
+
+  const overview = getProjectRulesOverview();
+  console.log(`   Project rules overview: ${overview.totalProjects} projects detected (${overview.configuredProjects} configured)`);
+  assert.ok(overview.totalProjects >= 1, 'Detected at least 1 project in overview');
+  assert.ok(Array.isArray(overview.projects), 'Overview contains projects array');
+  console.log('   ✔ Project Rules Overview passed\n');
 } finally {
   fs.rmSync(tempDir, { recursive: true, force: true });
 }
