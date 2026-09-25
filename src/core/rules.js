@@ -1,17 +1,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { PATHS, ensureDir } from './paths.js';
+import { PATHS, ensureDir, getDefaultWorkspaceDir } from './paths.js';
 import { createBackup } from './backup.js';
 import { listAntigravityProjects } from './workspaces.js';
 
 export const PRESET_RULES = [
   {
     id: 'full-user-rules',
-    name: '全套用户全局准则合集 (1~8条完整版)',
-    category: '全局综合规范',
+    name: '全套项目准则合集 (1~8条完整版)',
+    category: '综合规范',
     description: '包含独立思考求真、直陈异议、闭环验证、备份隔离、中文偏好、操作留痕、80行防膨胀及打包确认等全套规范。',
-    content: `# 用户规则 (User Rules)
+    content: `# 项目规则 (Project Rules)
 
 1. 保持独立思考与求真核实：严审前提漏洞与逻辑缺陷，严格区分事实、推测与观点，核实数据与结论来源，拒绝盲从迎合；
 2. 直陈异议与盲点提示：有不同意见直接指出并给出依据、风险及替代方案，主动提示遗漏的变量、潜在成本与偏差；
@@ -175,10 +175,11 @@ function syncSecondaryGlobalFile(content) {
       const existing = fs.readFileSync(geminiMd, 'utf8');
       const match = existing.match(/^([\s\S]*?<!-- context7 -->[\s\S]*?<!-- context7 -->)/);
       if (match) {
-        context7Part = match[1].trim() + '\n\n';
+        context7Part = match[1].trim() + '\n';
       }
     }
-    fs.writeFileSync(geminiMd, context7Part + content, 'utf8');
+    const cleanContent = content ? '\n' + content : '';
+    fs.writeFileSync(geminiMd, (context7Part + cleanContent).trimEnd() + '\n', 'utf8');
   } catch (err) {
     console.warn('[rules] Failed to sync secondary GEMINI.md:', err.message);
   }
@@ -288,7 +289,7 @@ export function appendPresetToRules(scope = 'global', projectDir = null, presetI
   if (newContent.length > 0) {
     newContent += '\n\n' + preset.content + '\n';
   } else {
-    newContent = `# 用户规则 (User Rules)\n\n${preset.content}\n`;
+    newContent = `# 项目规则 (Project Rules)\n\n${preset.content}\n`;
   }
 
   return saveRules(scope, projectDir, newContent);
@@ -368,36 +369,44 @@ export function initProjectRules(projectDir, templateId = 'default') {
 }
 
 /**
- * Copies the global AGENTS.md rules into a target workspace project.
+ * Resolves source rules content for inheriting or copying.
+ * Falls back to workspace parent rules or full preset if global rules are empty.
+ */
+export function resolveSyncSourceContent(referenceDir = null) {
+  const globalRules = loadRules('global');
+  if (globalRules.exists && globalRules.content) {
+    return globalRules.content;
+  }
+  const parentFile = findWorkspaceRulesFile(referenceDir || getDefaultWorkspaceDir());
+  if (parentFile && fs.existsSync(parentFile)) {
+    return fs.readFileSync(parentFile, 'utf8');
+  }
+  const preset = PRESET_RULES.find(p => p.id === 'full-user-rules') || PRESET_RULES[0];
+  return preset.content;
+}
+
+/**
+ * Copies source rules into a target workspace project.
  */
 export function copyGlobalRulesToProject(projectDir) {
   if (!projectDir || !fs.existsSync(projectDir)) {
     throw new Error('Project directory does not exist');
   }
 
-  const globalRules = loadRules('global');
-  if (!globalRules.exists || !globalRules.content) {
-    throw new Error('Global rules file is empty or does not exist');
-  }
-
+  const sourceContent = resolveSyncSourceContent(projectDir);
   const projectName = path.basename(projectDir);
-  const header = `# ${projectName} 项目规则 (Project Rules - 继承自全局)\n\n`;
-  const content = globalRules.content.startsWith('#')
-    ? header + globalRules.content.replace(/^#\s+[^\n]+\n+/, '')
-    : header + globalRules.content;
+  const header = `# ${projectName} 项目规则 (Project Rules)\n\n`;
+  const content = sourceContent.startsWith('#')
+    ? header + sourceContent.replace(/^#\s+[^\n]+\n+/, '')
+    : header + sourceContent;
 
   return saveRules('workspace', projectDir, content);
 }
 
 /**
- * Batch copies global rules to multiple projects.
+ * Batch copies rules to multiple workspace projects.
  */
 export function batchSyncGlobalRules(projectPaths = null, overwriteExisting = false) {
-  const globalRules = loadRules('global');
-  if (!globalRules.exists || !globalRules.content) {
-    throw new Error('全局系统规则内容为空或不存在');
-  }
-
   const allProjects = listAntigravityProjects();
   const targetPaths = projectPaths && projectPaths.length > 0
     ? projectPaths

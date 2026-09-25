@@ -42,14 +42,18 @@ assert.ok(sections[1].title.includes('保持独立思考'), 'List item 1 matched
 assert.ok(sections[3].title.includes('代码精简'), 'Header 3 matched');
 console.log('   ✔ Section parser test passed\n');
 
-// 3. Load global rules
-console.log('3. Testing loadRules(global)...');
+// 3. Load global & workspace project rules
+console.log('3. Testing loadRules(global & workspace)...');
 const globalRules = loadRules('global');
-console.log(`   Global rules found: ${globalRules.exists}, size: ${globalRules.size} bytes, total rules: ${globalRules.summary.totalRules}`);
-assert.ok(globalRules.exists, 'Global AGENTS.md exists on disk');
-assert.ok(globalRules.content.length > 0, 'Global content is not empty');
-assert.ok(globalRules.sections.length > 0, 'Global rules parsed into sections');
-console.log('   ✔ Global rules load passed\n');
+console.log(`   Global rules found: ${globalRules.exists}, size: ${globalRules.size} bytes`);
+assert.strictEqual(typeof globalRules.content, 'string', 'Global content is a valid string');
+
+const wsRules = loadRules('workspace', path.resolve('.'));
+console.log(`   Workspace project rules found: ${wsRules.exists}, size: ${wsRules.size} bytes, total rules: ${wsRules.summary.totalRules}`);
+assert.ok(wsRules.exists, 'Workspace project rules exist on disk');
+assert.ok(wsRules.content.length > 0, 'Workspace content is not empty');
+assert.ok(wsRules.sections.length > 0, 'Workspace rules parsed into sections');
+console.log('   ✔ Rules load passed\n');
 
 // 4. Temporary workspace rules test
 console.log('4. Testing save and append preset on temp workspace...');
@@ -75,7 +79,7 @@ try {
   const copyRes = copyGlobalRulesToProject(tempDir);
   assert.strictEqual(copyRes.ok, true, 'copyGlobalRulesToProject succeeded');
   const copiedRules = loadRules('workspace', tempDir);
-  assert.ok(copiedRules.content.includes('继承自全局'), 'Inherited global rules header present');
+  assert.ok(copiedRules.content.includes('项目规则'), 'Project rules header present');
 
   const overview = getProjectRulesOverview();
   console.log(`   Project rules overview: ${overview.totalProjects} projects detected (${overview.configuredProjects} configured)`);
