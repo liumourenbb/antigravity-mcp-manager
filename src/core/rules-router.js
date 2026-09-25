@@ -6,7 +6,8 @@ import {
   listModularRules,
   getProjectRulesOverview,
   initProjectRules,
-  copyGlobalRulesToProject
+  copyGlobalRulesToProject,
+  batchSyncGlobalRules
 } from './rules.js';
 
 /**
@@ -89,6 +90,15 @@ async function handleActionRulesRoutes(pathname, req, parseJsonBody, sendJson, s
     const body = await parseJsonBody(req);
     const { projectDir } = body;
     const result = copyGlobalRulesToProject(projectDir);
+    sendJson(200, { ok: true, result });
+    return true;
+  }
+
+  // 5. POST /api/rules/batch-sync-global
+  if (pathname === '/api/rules/batch-sync-global') {
+    const body = await parseJsonBody(req);
+    const { projectPaths = null, overwriteExisting = false } = body;
+    const result = batchSyncGlobalRules(projectPaths, overwriteExisting);
     sendJson(200, { ok: true, result });
     return true;
   }

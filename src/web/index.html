@@ -595,11 +595,15 @@
           <div class="flex items-center space-x-2.5">
             <button id="project-rules-refresh-btn" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white text-xs font-semibold flex items-center space-x-1.5 border border-win-border transition">
               <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
-              <span>刷新项目</span>
+              <span>刷新</span>
+            </button>
+            <button id="project-rules-batch-sync-btn" class="px-3 py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 hover:text-white text-xs font-semibold flex items-center space-x-1.5 border border-emerald-500/30 shadow-sm transition" title="将全局规则批量同步写入所有未配置的项目">
+              <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+              <span>一键同步全局到所有项目</span>
             </button>
             <button id="project-rules-copy-global-btn" class="px-3 py-1.5 rounded-lg bg-blue-600/30 hover:bg-blue-600/50 text-blue-200 hover:text-white text-xs font-semibold flex items-center space-x-1.5 border border-blue-500/30 shadow-sm transition">
               <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-              <span>从全局继承到当前工程</span>
+              <span>继承全局到当前</span>
             </button>
             <button id="project-rules-open-file-btn" title="在系统外部编辑器中打开当前工程规则" class="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white text-xs font-medium flex items-center space-x-1 border border-win-border transition">
               <i data-lucide="external-link" class="w-3.5 h-3.5"></i>

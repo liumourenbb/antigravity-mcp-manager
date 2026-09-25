@@ -1,10 +1,39 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { PATHS, ensureDir } from './paths.js';
 import { createBackup } from './backup.js';
 import { listAntigravityProjects } from './workspaces.js';
 
 export const PRESET_RULES = [
+  {
+    id: 'full-user-rules',
+    name: '全套用户全局准则合集 (1~8条完整版)',
+    category: '全局综合规范',
+    description: '包含独立思考求真、直陈异议、闭环验证、备份隔离、中文偏好、操作留痕、80行防膨胀及打包确认等全套规范。',
+    content: `# 用户规则 (User Rules)
+
+1. 保持独立思考与求真核实：严审前提漏洞与逻辑缺陷，严格区分事实、推测与观点，核实数据与结论来源，拒绝盲从迎合；
+2. 直陈异议与盲点提示：有不同意见直接指出并给出依据、风险及替代方案，主动提示遗漏的变量、潜在成本与偏差；
+3. 任务闭环与严格验证：任务完成后必须进行严格验证（如测试、构建或结果校验）；若未完全完成，必须生成结构化报告明确【要干什么（目标）】、【干了什么（进展）】和【还有什么没干（待办交接）】，以便无缝续接；
+4. 数据库安全与云端备份隔离：对数据库执行任何高危/变更操作（如 UPDATE、DELETE、DROP、TRUNCATE、结构变更或批量修改等）前必须先进行数据备份；备份数据必须上传/保存在 Google Drive（谷歌云端硬盘）上，严禁保存在会话相关目录或临时工件目录中（防止清理/删除会话时连带删除备份）；
+5. 语言与思考偏好：内部思考分析（Reasoning / Thinking）与最终回答均尽量使用中文；
+6. 服务器操作留痕与日志规范：对服务器执行任何操作（如 SSH 远程命令、服务启停、配置修改、部署更新等）时必须记录操作日志，明确记录【输入了什么命令】、【干了什么事情（操作意图与事项）】以及执行结果，若涉及密码/密钥等敏感信息必须主动脱敏；
+7. 代码精简与架构防膨胀规范：
+   - 单方法 80 行红线：单方法严格限制在 80 行以内（含签名与空行），超限严禁直接平铺，必须抽取为独立方法或外部组件；
+   - 杜绝制造“上帝类”：新增业务链路或外部 RPC/第三方调用须建立独立 Manager 或 Helper，严禁堆砌在既有 Service 中；VO/DTO/Query 等领域模型必须独立建 .java 文件，禁止声明复杂内部类；
+   - 最小改动拆分（新增外置、原位路由）：扩展老方法时原位改动控制在 1~3 行——分支扩充采用 Strategy/Handler 替代无限 if-else，繁杂校验与组装等旁支封装为 Helper 注入调用，多源汇聚与通用事务下沉至独立 Manager。
+8. 构建与打包确认红线 (Strict Packaging Authorization)：
+   - 任何涉及构建、编译二进制可执行文件（如 npm run build:win、生成 windows11.exe）及发布上传（GitHub Release、压缩包等）的高耗时与输出变更操作，必须提前向用户陈述并获得用户明确授权确认（“确认”或“yes”）后方可执行，严禁私自自动触发。`
+  },
+  {
+    id: 'packaging-confirmation',
+    name: '构建与打包确认红线（授权确认）',
+    category: '安全与风控',
+    description: '任何打包编译二进制 exe 及上传 Release 操作必须提前获得用户明确授权确认。',
+    content: `### 构建与打包确认红线规范
+- 任何涉及构建、编译二进制可执行文件（如 npm run build:win、生成 windows11.exe）及发布上传（GitHub Release、压缩包等）的高耗时与输出变更操作，必须提前向用户陈述并获得用户明确授权确认（“确认”或“yes”）后方可执行，严禁私自自动触发。`
+  },
   {
     id: 'rule-7-concise',
     name: '代码精简与架构防膨胀规范（80行红线）',
@@ -136,6 +165,26 @@ export function parseRuleSections(markdown) {
 }
 
 /**
+ * Synchronizes secondary global file ~/.gemini/GEMINI.md while preserving context7 preamble.
+ */
+function syncSecondaryGlobalFile(content) {
+  try {
+    const geminiMd = path.join(os.homedir(), '.gemini', 'GEMINI.md');
+    let context7Part = '';
+    if (fs.existsSync(geminiMd)) {
+      const existing = fs.readFileSync(geminiMd, 'utf8');
+      const match = existing.match(/^([\s\S]*?<!-- context7 -->[\s\S]*?<!-- context7 -->)/);
+      if (match) {
+        context7Part = match[1].trim() + '\n\n';
+      }
+    }
+    fs.writeFileSync(geminiMd, context7Part + content, 'utf8');
+  } catch (err) {
+    console.warn('[rules] Failed to sync secondary GEMINI.md:', err.message);
+  }
+}
+
+/**
  * Loads rules info and parsed structure for global or project scope.
  */
 export function loadRules(scope = 'global', projectDir = null) {
@@ -150,6 +199,10 @@ export function loadRules(scope = 'global', projectDir = null) {
       targetPath = parentRules;
       isInherited = true;
       inheritedFrom = parentRules;
+    } else if (fs.existsSync(PATHS.globalRulesFile)) {
+      targetPath = PATHS.globalRulesFile;
+      isInherited = true;
+      inheritedFrom = '全局系统规则';
     }
   }
 
@@ -205,6 +258,10 @@ export function saveRules(scope = 'global', projectDir = null, content = '') {
 
   fs.writeFileSync(filePath, content, 'utf8');
   const stat = fs.statSync(filePath);
+
+  if (scope === 'global') {
+    syncSecondaryGlobalFile(content);
+  }
 
   return {
     ok: true,
@@ -289,7 +346,8 @@ export function getProjectRulesOverview() {
 
   return {
     totalProjects: list.length,
-    configuredProjects: list.filter(p => p.hasRules).length,
+    configuredProjects: list.filter(p => p.hasRules && !p.isInherited).length,
+    inheritedProjects: list.filter(p => p.hasRules && p.isInherited).length,
     unconfiguredProjects: list.filter(p => !p.hasRules).length,
     overBudgetProjects: list.filter(p => p.isOverBudget).length,
     projects: list
@@ -331,3 +389,36 @@ export function copyGlobalRulesToProject(projectDir) {
   return saveRules('workspace', projectDir, content);
 }
 
+/**
+ * Batch copies global rules to multiple projects.
+ */
+export function batchSyncGlobalRules(projectPaths = null, overwriteExisting = false) {
+  const globalRules = loadRules('global');
+  if (!globalRules.exists || !globalRules.content) {
+    throw new Error('全局系统规则内容为空或不存在');
+  }
+
+  const allProjects = listAntigravityProjects();
+  const targetPaths = projectPaths && projectPaths.length > 0
+    ? projectPaths
+    : allProjects.map(p => p.path);
+
+  const results = [];
+  for (const pPath of targetPaths) {
+    if (!fs.existsSync(pPath)) continue;
+    const current = loadRules('workspace', pPath);
+    if (current.exists && !current.isInherited && !overwriteExisting) {
+      results.push({ path: pPath, name: path.basename(pPath), status: 'skipped', reason: '已有专属规则' });
+      continue;
+    }
+    copyGlobalRulesToProject(pPath);
+    results.push({ path: pPath, name: path.basename(pPath), status: 'synced' });
+  }
+
+  return {
+    total: results.length,
+    synced: results.filter(r => r.status === 'synced').length,
+    skipped: results.filter(r => r.status === 'skipped').length,
+    details: results
+  };
+}

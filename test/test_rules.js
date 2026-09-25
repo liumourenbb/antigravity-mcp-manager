@@ -10,7 +10,8 @@ import {
   appendPresetToRules,
   getProjectRulesOverview,
   initProjectRules,
-  copyGlobalRulesToProject
+  copyGlobalRulesToProject,
+  batchSyncGlobalRules
 } from '../src/core/rules.js';
 
 console.log('🧪 Testing Rules module...\n');
@@ -80,7 +81,11 @@ try {
   console.log(`   Project rules overview: ${overview.totalProjects} projects detected (${overview.configuredProjects} configured)`);
   assert.ok(overview.totalProjects >= 1, 'Detected at least 1 project in overview');
   assert.ok(Array.isArray(overview.projects), 'Overview contains projects array');
-  console.log('   ✔ Project Rules Overview passed\n');
+
+  // Test batchSyncGlobalRules
+  const batchRes = batchSyncGlobalRules([tempDir], true);
+  assert.strictEqual(batchRes.synced, 1, 'batchSyncGlobalRules successfully synced temp workspace');
+  console.log('   ✔ Batch Sync test passed\n');
 } finally {
   fs.rmSync(tempDir, { recursive: true, force: true });
 }

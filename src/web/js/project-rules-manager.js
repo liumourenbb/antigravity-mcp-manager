@@ -45,6 +45,12 @@ const ProjectRulesManager = {
       copyGlobalBtn.addEventListener('click', () => this.copyFromGlobal());
     }
 
+    // Batch sync all button
+    const batchSyncBtn = document.getElementById('project-rules-batch-sync-btn');
+    if (batchSyncBtn) {
+      batchSyncBtn.addEventListener('click', () => this.batchSyncGlobal());
+    }
+
     // Open file in external editor
     const openFileBtn = document.getElementById('project-rules-open-file-btn');
     if (openFileBtn) {
@@ -394,6 +400,25 @@ const ProjectRulesManager = {
       }
     } catch (err) {
       showToast('导入全局规则异常: ' + err.message, 'error');
+    }
+  },
+
+  async batchSyncGlobal() {
+    const targets = this.projects.filter(p => !p.hasRules || p.isInherited);
+    const count = targets.length;
+    if (!confirm(`确定要将全局系统规则一键同步写入 ${count} 个项目吗？\n（已有项目专属规则的工程将自动安全跳过）`)) {
+      return;
+    }
+    try {
+      const res = await api.batchSyncGlobalRules(null, false);
+      if (res && res.ok) {
+        showToast(`批量同步成功！已写入 ${res.result.synced} 个工程，保留 ${res.result.skipped} 个已有工程`, 'success');
+        await this.load();
+      } else {
+        showToast(res ? res.error : '批量同步失败', 'error');
+      }
+    } catch (err) {
+      showToast('批量同步异常: ' + err.message, 'error');
     }
   },
 

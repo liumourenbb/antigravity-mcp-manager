@@ -32,4 +32,5 @@ contextBridge.exposeInMainWorld('mcpApi', {
   getProjectRulesOverview: () => ipcRenderer.invoke('mcp:getProjectRulesOverview'),
   initProjectRules: (projectDir, templateId) => ipcRenderer.invoke('mcp:initProjectRules', { projectDir, templateId }),
   copyGlobalRulesToProject: (projectDir) => ipcRenderer.invoke('mcp:copyGlobalRulesToProject', { projectDir }),
+  batchSyncGlobalRules: (projectPaths, overwriteExisting) => ipcRenderer.invoke('mcp:batchSyncGlobalRules', { projectPaths, overwriteExisting }),
 });

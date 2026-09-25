@@ -223,5 +223,17 @@ const api = {
       body: JSON.stringify({ projectDir })
     });
     return res.json();
+  },
+
+  async batchSyncGlobalRules(projectPaths = null, overwriteExisting = false) {
+    if (window.mcpApi && window.mcpApi.batchSyncGlobalRules) {
+      return window.mcpApi.batchSyncGlobalRules(projectPaths, overwriteExisting);
+    }
+    const res = await fetch('/api/rules/batch-sync-global', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectPaths, overwriteExisting })
+    });
+    return res.json();
   }
 };

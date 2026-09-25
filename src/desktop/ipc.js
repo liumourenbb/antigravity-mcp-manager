@@ -16,7 +16,8 @@ import {
   resolveRulesPath,
   getProjectRulesOverview,
   initProjectRules,
-  copyGlobalRulesToProject
+  copyGlobalRulesToProject,
+  batchSyncGlobalRules
 } from '../core/rules.js';
 
 /**
@@ -267,9 +268,9 @@ function registerSystemIpcHandlers() {
 }
 
 /**
- * Registers IPC handlers for Antigravity rules management.
+ * Registers basic rules IPC handlers (scope query, save, presets, modular, open).
  */
-function registerRulesIpcHandlers() {
+function registerRulesBasicIpcHandlers() {
   ipcMain.handle('mcp:getRules', async (event, { scope = 'global', projectDir = null } = {}) => {
     try {
       return { ok: true, rules: loadRules(scope, projectDir) };
@@ -316,7 +317,12 @@ function registerRulesIpcHandlers() {
       return { ok: false, error: err.message };
     }
   });
+}
 
+/**
+ * Registers project-specific rules IPC handlers.
+ */
+function registerProjectRulesIpcHandlers() {
   ipcMain.handle('mcp:getProjectRulesOverview', async () => {
     try {
       return { ok: true, ...getProjectRulesOverview() };
@@ -340,6 +346,14 @@ function registerRulesIpcHandlers() {
       return { ok: false, error: err.message };
     }
   });
+
+  ipcMain.handle('mcp:batchSyncGlobalRules', async (event, { projectPaths = null, overwriteExisting = false } = {}) => {
+    try {
+      return { ok: true, result: batchSyncGlobalRules(projectPaths, overwriteExisting) };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
 }
 
 /**
@@ -351,5 +365,6 @@ export function registerIpcHandlers() {
   registerServerCrudIpcHandlers();
   registerDiagnosticsAndBackupIpcHandlers();
   registerSystemIpcHandlers();
-  registerRulesIpcHandlers();
+  registerRulesBasicIpcHandlers();
+  registerProjectRulesIpcHandlers();
 }
