@@ -18,7 +18,12 @@ const ProjectRulesManager = {
   },
 
   bindEvents() {
-    // Search input
+    this.bindSearchAndActionButtons();
+    this.bindEditorEvents();
+    this.bindModalEvents();
+  },
+
+  bindSearchAndActionButtons() {
     const searchInput = document.getElementById('project-rules-search');
     if (searchInput) {
       searchInput.addEventListener('input', (e) => {
@@ -27,13 +32,9 @@ const ProjectRulesManager = {
       });
     }
 
-    // Refresh button
     const refreshBtn = document.getElementById('project-rules-refresh-btn');
-    if (refreshBtn) {
-      refreshBtn.addEventListener('click', () => this.load());
-    }
+    if (refreshBtn) refreshBtn.addEventListener('click', () => this.load());
 
-    // Live refresh button
     const liveRefreshBtn = document.getElementById('project-rules-live-refresh-btn');
     if (liveRefreshBtn) {
       liveRefreshBtn.addEventListener('click', () => {
@@ -42,39 +43,27 @@ const ProjectRulesManager = {
       });
     }
 
-    // Save button
-    const saveBtn = document.getElementById('project-rules-save-btn');
-    if (saveBtn) {
-      saveBtn.addEventListener('click', () => this.save());
-    }
-
-    // Copy from global button
     const copyGlobalBtn = document.getElementById('project-rules-copy-global-btn');
-    if (copyGlobalBtn) {
-      copyGlobalBtn.addEventListener('click', () => this.copyFromGlobal());
-    }
+    if (copyGlobalBtn) copyGlobalBtn.addEventListener('click', () => this.copyFromGlobal());
 
-    // Batch sync all button
     const batchSyncBtn = document.getElementById('project-rules-batch-sync-btn');
-    if (batchSyncBtn) {
-      batchSyncBtn.addEventListener('click', () => this.batchSyncGlobal());
-    }
+    if (batchSyncBtn) batchSyncBtn.addEventListener('click', () => this.batchSyncGlobal());
 
-    // Open file in external editor
     const openFileBtn = document.getElementById('project-rules-open-file-btn');
-    if (openFileBtn) {
-      openFileBtn.addEventListener('click', () => this.openExternalFile());
-    }
+    if (openFileBtn) openFileBtn.addEventListener('click', () => this.openExternalFile());
 
-    // Project selector dropdown
     const selectEl = document.getElementById('project-rules-workspace-select');
     if (selectEl) {
       selectEl.addEventListener('change', (e) => {
-        this.selectProject(e.target.value);
+        this.selectProject(e.target.value, true);
       });
     }
+  },
 
-    // Studio editor textarea
+  bindEditorEvents() {
+    const saveBtn = document.getElementById('project-rules-save-btn');
+    if (saveBtn) saveBtn.addEventListener('click', () => this.save());
+
     const textarea = document.getElementById('project-rules-textarea');
     if (textarea) {
       textarea.addEventListener('input', () => {
@@ -89,6 +78,24 @@ const ProjectRulesManager = {
         }
       });
     }
+  },
+
+  bindModalEvents() {
+    const modal = document.getElementById('modalProjectRulesStudio');
+    if (modal) {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) this.closeStudioModal();
+      });
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const m = document.getElementById('modalProjectRulesStudio');
+        if (m && !m.classList.contains('hidden')) {
+          this.closeStudioModal();
+        }
+      }
+    });
   },
 
   async load() {
@@ -297,16 +304,36 @@ const ProjectRulesManager = {
         this.currentRules = res.rules;
         this.renderStudio(res.rules);
         if (shouldScroll) {
-          const editorEl = document.getElementById('project-rules-textarea');
-          if (editorEl) {
-            editorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            editorEl.focus();
-          }
+          this.openStudioModal();
         }
       }
     } catch (err) {
       showToast('读取项目规则失败: ' + err.message, 'error');
     }
+  },
+
+  openStudioModal() {
+    const modal = document.getElementById('modalProjectRulesStudio');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+    const editorEl = document.getElementById('project-rules-textarea');
+    if (editorEl) editorEl.focus();
+    if (window.lucide) lucide.createIcons();
+  },
+
+  closeStudioModal() {
+    if (this.isDirty && !confirm('当前项目规则有未保存的修改，关闭将丢失修改，是否继续？')) {
+      return;
+    }
+    const modal = document.getElementById('modalProjectRulesStudio');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+    this.isDirty = false;
+    this.updateSaveButtonState(false);
   },
 
   renderStudio(rules) {
