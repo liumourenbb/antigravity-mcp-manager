@@ -73,11 +73,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   await fetchServers();
   await fetchPresets();
   checkJetBrains();
-  if (window.RulesManager && typeof RulesManager.init === 'function') {
-    RulesManager.init();
+  const rm = window.RulesManager || (typeof RulesManager !== 'undefined' ? RulesManager : null);
+  if (rm && typeof rm.init === 'function') {
+    rm.init();
   }
-  if (window.ProjectRulesManager && typeof ProjectRulesManager.init === 'function') {
-    ProjectRulesManager.init();
+  const prm = window.ProjectRulesManager || (typeof ProjectRulesManager !== 'undefined' ? ProjectRulesManager : null);
+  if (prm && typeof prm.init === 'function') {
+    prm.init();
   }
   if (window.lucide) lucide.createIcons();
 });

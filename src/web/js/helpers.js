@@ -71,6 +71,8 @@ function switchTab(tabId) {
 
   if (tabId === 'jetbrains' && typeof checkJetBrains === 'function') checkJetBrains();
   if (tabId === 'backups' && typeof renderBackupsView === 'function') renderBackupsView();
-  if (tabId === 'rules' && window.RulesManager && typeof RulesManager.load === 'function') RulesManager.load();
-  if (tabId === 'project-rules' && window.ProjectRulesManager && typeof ProjectRulesManager.load === 'function') ProjectRulesManager.load();
+  const rm = window.RulesManager || (typeof RulesManager !== 'undefined' ? RulesManager : null);
+  if (tabId === 'rules' && rm && typeof rm.load === 'function') rm.load();
+  const prm = window.ProjectRulesManager || (typeof ProjectRulesManager !== 'undefined' ? ProjectRulesManager : null);
+  if (tabId === 'project-rules' && prm && typeof prm.load === 'function') prm.load();
 }

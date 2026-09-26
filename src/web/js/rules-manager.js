@@ -155,7 +155,8 @@ const RulesManager = {
     // 1. File path and scope indicator
     const pathEl = document.getElementById('rules-file-path');
     if (pathEl) {
-      pathEl.textContent = d.filePath;
+      const suffix = d.exists ? '' : ' (未配置/已清空)';
+      pathEl.textContent = d.filePath + suffix;
       pathEl.title = d.filePath;
     }
 
@@ -168,6 +169,11 @@ const RulesManager = {
     const textarea = document.getElementById('rules-editor-textarea');
     if (textarea) {
       textarea.value = d.content || '';
+      if (!d.content) {
+        textarea.placeholder = this.scope === 'global'
+          ? '# 全局规则已清空（当前处于纯项目规则模式）\n# 可点击右上角【项目专属规则 (Workspace)】或左侧导航【项目规则管理】查看工程规则。'
+          : '# 当前项目规则为空，可从右上方【预设规则库】套用或点击保存直接创建...';
+      }
     }
 
     // 3. Stats & Budget
@@ -207,10 +213,13 @@ const RulesManager = {
     if (!listEl) return;
 
     if (!sections || sections.length === 0) {
+      const emptyNote = this.scope === 'global'
+        ? `全局规则已清空（纯项目模式）<div class="mt-2.5"><button onclick="RulesManager.switchScope('workspace')" class="px-2.5 py-1 rounded bg-blue-600/30 hover:bg-blue-600/50 text-blue-200 text-[11px] transition">切换查看当前工作区规则</button></div>`
+        : '暂无解析到的规则条目';
       listEl.innerHTML = `
         <div class="text-center py-8 text-neutral-500 text-xs">
           <i data-lucide="file-question" class="w-6 h-6 mx-auto mb-2 opacity-40"></i>
-          暂无解析到的规则条目
+          <div>${emptyNote}</div>
         </div>
       `;
       if (window.lucide) lucide.createIcons();
@@ -361,3 +370,6 @@ const RulesManager = {
     }
   }
 };
+
+window.RulesManager = RulesManager;
+

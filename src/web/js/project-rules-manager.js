@@ -489,3 +489,6 @@ const ProjectRulesManager = {
     if (window.lucide) lucide.createIcons();
   }
 };
+
+window.ProjectRulesManager = ProjectRulesManager;
+
