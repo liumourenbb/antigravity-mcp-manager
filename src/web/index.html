@@ -970,18 +970,18 @@
           <label class="block font-medium text-win-textSecondary mb-1">传输通道 (Transport) *</label>
           <div class="flex space-x-4">
             <label class="flex items-center space-x-2 cursor-pointer text-slate-300">
-              <input type="radio" name="formType" value="stdio" checked onchange="toggleTransportFields()" class="text-win-accent focus:ring-0">
+              <input type="radio" name="transportType" value="stdio" checked onchange="toggleTransportFields('stdio')" class="text-win-accent focus:ring-0">
               <span>Stdio (本地命令行)</span>
             </label>
             <label class="flex items-center space-x-2 cursor-pointer text-slate-300">
-              <input type="radio" name="formType" value="http" onchange="toggleTransportFields()" class="text-win-accent focus:ring-0">
+              <input type="radio" name="transportType" value="http" onchange="toggleTransportFields('http')" class="text-win-accent focus:ring-0">
               <span>HTTP / SSE (远程 URL)</span>
             </label>
           </div>
         </div>
 
         <!-- STDIO FIELDS -->
-        <div id="sectionStdio" class="space-y-3.5 pt-1">
+        <div id="fieldGroupStdio" class="space-y-3.5 pt-1">
           <div>
             <label class="block font-medium text-win-textSecondary mb-1">可执行程序 (Command) *</label>
             <input type="text" id="formCommand" placeholder="npx, uv, python, node, docker" class="w-full bg-[#1a1a1a] border border-win-border rounded-lg px-3 py-2 text-white focus:outline-none focus:border-win-accent">
@@ -1000,12 +1000,12 @@
                 <span>添加变量</span>
               </button>
             </div>
-            <div id="envContainer" class="space-y-2"></div>
+            <div id="envList" class="space-y-2"></div>
           </div>
         </div>
 
         <!-- HTTP FIELDS -->
-        <div id="sectionHttp" class="space-y-3.5 pt-1 hidden">
+        <div id="fieldGroupHttp" class="space-y-3.5 pt-1 hidden">
           <div>
             <label class="block font-medium text-win-textSecondary mb-1">服务端点 URL *</label>
             <input type="text" id="formUrl" placeholder="https://mcp.context7.com/mcp" class="w-full bg-[#1a1a1a] border border-win-border rounded-lg px-3 py-2 text-white focus:outline-none focus:border-win-accent">
@@ -1019,7 +1019,7 @@
                 <span>添加 Header</span>
               </button>
             </div>
-            <div id="headerContainer" class="space-y-2"></div>
+            <div id="headerList" class="space-y-2"></div>
           </div>
         </div>
 

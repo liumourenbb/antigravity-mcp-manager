@@ -168,16 +168,30 @@ function handleFormNameChange() {
   }
 }
 
+function getEnvListContainer() {
+  return document.getElementById('envList') || document.getElementById('envContainer');
+}
+
+function getHeaderListContainer() {
+  return document.getElementById('headerList') || document.getElementById('headerContainer');
+}
+
 function openAddServerModal() {
-  document.getElementById('serverForm').reset();
-  document.getElementById('modalServerTitle').innerText = '添加 MCP 服务';
-  document.getElementById('formOriginalName').value = '';
-  document.getElementById('formOriginalScope').value = '';
-  document.getElementById('formOriginalWorkspaceDir').value = '';
-  document.getElementById('formName').readOnly = false;
-  document.getElementById('lblFormNameChangeHint').classList.add('hidden');
-  document.getElementById('envList').innerHTML = '';
-  document.getElementById('headerList').innerHTML = '';
+  document.getElementById('serverForm')?.reset();
+  const titleEl = document.getElementById('modalServerTitle');
+  if (titleEl) titleEl.innerText = '添加 MCP 服务';
+  const fn = document.getElementById('formName');
+  if (fn) { fn.value = ''; fn.readOnly = false; }
+  ['formOriginalName', 'formOriginalScope', 'formOriginalWorkspaceDir'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('lblFormNameChangeHint')?.classList.add('hidden');
+
+  const envCont = getEnvListContainer();
+  if (envCont) envCont.innerHTML = '';
+  const headerCont = getHeaderListContainer();
+  if (headerCont) headerCont.innerHTML = '';
 
   const preferScope = currentScopeFilter === 'workspace' ? 'workspace' : 'global';
   setFormScope(preferScope, currentWorkspace);
@@ -186,56 +200,85 @@ function openAddServerModal() {
   openModal('modalServerForm');
 }
 
-function editServer(name, scope, encodedConfigPath) {
+function editServer(nameInput, scope, encodedConfigPath) {
+  let name = nameInput;
+  try {
+    if (typeof nameInput === 'string' && nameInput.includes('%')) {
+      name = decodeURIComponent(nameInput);
+    }
+  } catch {}
+
   const configPath = encodedConfigPath ? decodeURIComponent(encodedConfigPath) : '';
   const server = findServer(name, scope, configPath);
-  if (!server) return;
+  if (!server) {
+    showToast(`未找到服务配置: ${name || '未知'}`, 'error');
+    return;
+  }
 
-  document.getElementById('serverForm').reset();
-  document.getElementById('modalServerTitle').innerText = `编辑 MCP 服务: ${server.name}`;
-  document.getElementById('formName').value = server.name;
-  document.getElementById('formName').readOnly = false;
-  document.getElementById('formOriginalName').value = server.name;
-  document.getElementById('formOriginalScope').value = server.scope || 'global';
-  document.getElementById('lblFormNameChangeHint').classList.add('hidden');
+  document.getElementById('serverForm')?.reset();
+  const titleEl = document.getElementById('modalServerTitle');
+  if (titleEl) titleEl.innerText = `编辑 MCP 服务: ${server.name}`;
+  const fn = document.getElementById('formName');
+  if (fn) { fn.value = server.name; fn.readOnly = false; }
+  const origName = document.getElementById('formOriginalName');
+  if (origName) origName.value = server.name;
+  const origScope = document.getElementById('formOriginalScope');
+  if (origScope) origScope.value = server.scope || 'global';
+  document.getElementById('lblFormNameChangeHint')?.classList.add('hidden');
 
   let serverWs = '';
   if (server.configPath) {
     serverWs = server.configPath.replace(/[\\\/]\.agents?[\\\/]mcp_config\.json$/i, '');
   }
-  document.getElementById('formOriginalWorkspaceDir').value = serverWs || currentWorkspace;
+  const origWs = document.getElementById('formOriginalWorkspaceDir');
+  if (origWs) origWs.value = serverWs || currentWorkspace;
 
   setFormScope(server.scope || 'global', serverWs || currentWorkspace);
 
   const isHttp = server.type === 'http';
-  document.querySelector(`input[name="transportType"][value="${isHttp ? 'http' : 'stdio'}"]`).checked = true;
+  const radio = document.querySelector(`input[name="transportType"][value="${isHttp ? 'http' : 'stdio'}"], input[name="formType"][value="${isHttp ? 'http' : 'stdio'}"]`);
+  if (radio) radio.checked = true;
   toggleTransportFields(isHttp ? 'http' : 'stdio');
 
   if (isHttp) {
-    document.getElementById('formUrl').value = server.url || '';
+    const urlEl = document.getElementById('formUrl');
+    if (urlEl) urlEl.value = server.url || '';
     const headers = server.headers || {};
-    const headerList = document.getElementById('headerList');
-    headerList.innerHTML = '';
-    Object.keys(headers).forEach(k => addHeaderRow(k, headers[k]));
+    const headerList = getHeaderListContainer();
+    if (headerList) {
+      headerList.innerHTML = '';
+      Object.keys(headers).forEach(k => addHeaderRow(k, headers[k]));
+    }
   } else {
-    document.getElementById('formCommand').value = server.command || '';
-    document.getElementById('formArgs').value = (server.args || []).join(' ');
+    const cmdEl = document.getElementById('formCommand');
+    if (cmdEl) cmdEl.value = server.command || '';
+    const argsEl = document.getElementById('formArgs');
+    if (argsEl) argsEl.value = (server.args || []).join(' ');
     const env = server.env || {};
-    const envList = document.getElementById('envList');
-    envList.innerHTML = '';
-    Object.keys(env).forEach(k => addEnvRow(k, env[k]));
+    const envList = getEnvListContainer();
+    if (envList) {
+      envList.innerHTML = '';
+      Object.keys(env).forEach(k => addEnvRow(k, env[k]));
+    }
   }
+
+  const disEl = document.getElementById('formDisabled');
+  if (disEl) disEl.checked = Boolean(server.disabled);
 
   openModal('modalServerForm');
 }
 
 function toggleTransportFields(type) {
-  document.getElementById('fieldGroupStdio').classList.toggle('hidden', type !== 'stdio');
-  document.getElementById('fieldGroupHttp').classList.toggle('hidden', type !== 'http');
+  const activeType = type || document.querySelector('input[name="transportType"]:checked, input[name="formType"]:checked')?.value || 'stdio';
+  const elStdio = document.getElementById('fieldGroupStdio') || document.getElementById('sectionStdio');
+  const elHttp = document.getElementById('fieldGroupHttp') || document.getElementById('sectionHttp');
+  if (elStdio) elStdio.classList.toggle('hidden', activeType !== 'stdio');
+  if (elHttp) elHttp.classList.toggle('hidden', activeType !== 'http');
 }
 
 function addEnvRow(key = '', val = '') {
-  const container = document.getElementById('envList');
+  const container = getEnvListContainer();
+  if (!container) return;
   const div = document.createElement('div');
   div.className = 'flex items-center space-x-2';
   div.innerHTML = `
@@ -246,11 +289,12 @@ function addEnvRow(key = '', val = '') {
     </button>
   `;
   container.appendChild(div);
-  lucide.createIcons();
+  if (window.lucide) lucide.createIcons();
 }
 
 function addHeaderRow(key = '', val = '') {
-  const container = document.getElementById('headerList');
+  const container = getHeaderListContainer();
+  if (!container) return;
   const div = document.createElement('div');
   div.className = 'flex items-center space-x-2';
   div.innerHTML = `
@@ -261,26 +305,32 @@ function addHeaderRow(key = '', val = '') {
     </button>
   `;
   container.appendChild(div);
-  lucide.createIcons();
+  if (window.lucide) lucide.createIcons();
 }
 
 function collectEnvFromForm() {
   const env = {};
-  document.querySelectorAll('#envList > div').forEach(row => {
-    const k = row.querySelector('.env-key')?.value.trim();
-    const v = row.querySelector('.env-val')?.value.trim();
-    if (k) env[k] = v || '';
-  });
+  const container = getEnvListContainer();
+  if (container) {
+    container.querySelectorAll('div').forEach(row => {
+      const k = row.querySelector('.env-key')?.value.trim();
+      const v = row.querySelector('.env-val')?.value.trim();
+      if (k) env[k] = v || '';
+    });
+  }
   return env;
 }
 
 function collectHeadersFromForm() {
   const headers = {};
-  document.querySelectorAll('#headerList > div').forEach(row => {
-    const k = row.querySelector('.header-key')?.value.trim();
-    const v = row.querySelector('.header-val')?.value.trim();
-    if (k) headers[k] = v || '';
-  });
+  const container = getHeaderListContainer();
+  if (container) {
+    container.querySelectorAll('div').forEach(row => {
+      const k = row.querySelector('.header-key')?.value.trim();
+      const v = row.querySelector('.header-val')?.value.trim();
+      if (k) headers[k] = v || '';
+    });
+  }
   return headers;
 }
 
@@ -288,13 +338,13 @@ function assembleServerConfig(type) {
   if (type === 'http') {
     return {
       type: 'http',
-      url: document.getElementById('formUrl').value.trim(),
+      url: document.getElementById('formUrl')?.value.trim() || '',
       headers: collectHeadersFromForm()
     };
   }
-  const rawArgs = document.getElementById('formArgs').value.trim();
+  const rawArgs = document.getElementById('formArgs')?.value.trim() || '';
   return {
-    command: document.getElementById('formCommand').value.trim(),
+    command: document.getElementById('formCommand')?.value.trim() || '',
     args: rawArgs ? rawArgs.split(/\s+/).filter(Boolean) : [],
     env: collectEnvFromForm()
   };
@@ -302,18 +352,21 @@ function assembleServerConfig(type) {
 
 async function handleSaveServer(e) {
   e.preventDefault();
-  const name = document.getElementById('formName').value.trim();
-  const scope = document.getElementById('formScope').value || 'global';
-  const type = document.querySelector('input[name="transportType"]:checked')?.value || 'stdio';
+  const name = (document.getElementById('formName')?.value || '').trim();
+  const scope = document.getElementById('formScope')?.value || 'global';
+  const typeRadio = document.querySelector('input[name="transportType"]:checked, input[name="formType"]:checked');
+  const type = typeRadio?.value || 'stdio';
   const targetWs = scope === 'workspace' ? (document.getElementById('formTargetWorkspace')?.value || currentWorkspace) : undefined;
 
-  const originalName = document.getElementById('formOriginalName').value || '';
-  const originalScope = document.getElementById('formOriginalScope').value || '';
-  const originalWorkspaceDir = document.getElementById('formOriginalWorkspaceDir').value || '';
+  const originalName = document.getElementById('formOriginalName')?.value || '';
+  const originalScope = document.getElementById('formOriginalScope')?.value || '';
+  const originalWorkspaceDir = document.getElementById('formOriginalWorkspaceDir')?.value || '';
+  const disabled = document.getElementById('formDisabled')?.checked || false;
 
   if (!name) return showToast('请输入服务名称', 'error');
 
   const config = assembleServerConfig(type);
+  if (disabled) config.disabled = true;
 
   try {
     const res = await api.saveServer({

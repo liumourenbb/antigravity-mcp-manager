@@ -48,17 +48,23 @@ function applyPreset(name) {
 
   const conf = preset.config || {};
   const isHttp = conf.type === 'http' || Boolean(conf.url);
-  document.querySelector(`input[name="transportType"][value="${isHttp ? 'http' : 'stdio'}"]`).checked = true;
+  const radio = document.querySelector(`input[name="transportType"][value="${isHttp ? 'http' : 'stdio'}"], input[name="formType"][value="${isHttp ? 'http' : 'stdio'}"]`);
+  if (radio) radio.checked = true;
   toggleTransportFields(isHttp ? 'http' : 'stdio');
 
   if (isHttp) {
-    document.getElementById('formUrl').value = conf.url || '';
+    const urlEl = document.getElementById('formUrl');
+    if (urlEl) urlEl.value = conf.url || '';
   } else {
-    document.getElementById('formCommand').value = conf.command || '';
-    document.getElementById('formArgs').value = (conf.args || []).join(' ');
-    const envList = document.getElementById('envList');
-    envList.innerHTML = '';
-    Object.keys(conf.env || {}).forEach(k => addEnvRow(k, conf.env[k]));
+    const cmdEl = document.getElementById('formCommand');
+    if (cmdEl) cmdEl.value = conf.command || '';
+    const argsEl = document.getElementById('formArgs');
+    if (argsEl) argsEl.value = (conf.args || []).join(' ');
+    const envCont = typeof getEnvListContainer === 'function' ? getEnvListContainer() : document.getElementById('envList');
+    if (envCont) {
+      envCont.innerHTML = '';
+      Object.keys(conf.env || {}).forEach(k => addEnvRow(k, conf.env[k]));
+    }
   }
 
   showToast(`已套用预设模板 [${preset.name}]，请确认参数后点击保存`, 'info');

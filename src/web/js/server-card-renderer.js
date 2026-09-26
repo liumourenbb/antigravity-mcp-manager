@@ -37,6 +37,7 @@ function getServerProjectInfo(s) {
 
 function findServer(name, scope, configPath) {
   if (!name) return null;
+  const lowerName = name.toLowerCase();
   if (scope) {
     if (configPath) {
       const exact = allServers.find(s => s.name === name && s.scope === scope && s.configPath && pathResolve(s.configPath) === pathResolve(configPath));
@@ -44,8 +45,10 @@ function findServer(name, scope, configPath) {
     }
     const scoped = allServers.find(s => s.name === name && s.scope === scope);
     if (scoped) return scoped;
+    const scopedLower = allServers.find(s => s.name.toLowerCase() === lowerName && s.scope === scope);
+    if (scopedLower) return scopedLower;
   }
-  return allServers.find(s => s.name === name);
+  return allServers.find(s => s.name === name) || allServers.find(s => s.name.toLowerCase() === lowerName);
 }
 
 function updateMcpTooltipContent(info, server) {
@@ -219,30 +222,33 @@ function renderCardHeaderHtml(s, isHttp, scopeBadge, typeBadge) {
 }
 
 function renderCardFooterHtml(s) {
+  const encName = encodeURIComponent(s.name);
+  const encPath = encodeURIComponent(s.configPath || '');
+  const encScope = encodeURIComponent(s.scope || 'global');
   return `
     <div class="pt-3 mt-3 border-t border-white/5 flex items-center justify-between">
-      <div id="ping-${s.name}" class="flex items-center space-x-1.5 text-[11px] ${s.disabled ? 'text-win-textTertiary' : 'text-emerald-400 font-medium'}">
+      <div id="ping-${escapeHtml(s.name)}" class="flex items-center space-x-1.5 text-[11px] ${s.disabled ? 'text-win-textTertiary' : 'text-emerald-400 font-medium'}">
         <span class="w-2 h-2 rounded-full ${s.disabled ? 'bg-slate-600' : 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]'} inline-block"></span>
         <span>${s.disabled ? '已停用' : '就绪'}</span>
       </div>
 
       <div class="flex items-center space-x-1">
-        <button onclick="testConnection('${s.name}')" title="测试连接" class="p-1.5 rounded-lg hover:bg-white/10 text-win-textSecondary hover:text-white transition">
+        <button onclick="testConnection('${encName}')" title="测试连接" class="p-1.5 rounded-lg hover:bg-white/10 text-win-textSecondary hover:text-white transition">
           <i data-lucide="activity" class="w-3.5 h-3.5"></i>
         </button>
-        <button onclick="inspectTools('${s.name}')" title="探查 Schema" class="p-1.5 rounded-lg hover:bg-white/10 text-win-textSecondary hover:text-emerald-400 transition">
+        <button onclick="inspectTools('${encName}')" title="探查 Schema" class="p-1.5 rounded-lg hover:bg-white/10 text-win-textSecondary hover:text-emerald-400 transition">
           <i data-lucide="wrench" class="w-3.5 h-3.5"></i>
         </button>
-        <button onclick="copyServerConfig('${escapeHtml(s.name)}', '${s.scope}', '${encodeURIComponent(s.configPath || '')}')" title="复制 MCP 配置到剪贴板" class="p-1.5 rounded-lg hover:bg-white/10 text-win-textSecondary hover:text-indigo-400 transition">
+        <button onclick="copyServerConfig('${encName}', '${encScope}', '${encPath}')" title="复制 MCP 配置到剪贴板" class="p-1.5 rounded-lg hover:bg-white/10 text-win-textSecondary hover:text-indigo-400 transition">
           <i data-lucide="copy" class="w-3.5 h-3.5"></i>
         </button>
-        <button onclick="cloneServerDirectly('${escapeHtml(s.name)}', '${s.scope}', '${encodeURIComponent(s.configPath || '')}')" title="一键克隆此服务到新配置" class="p-1.5 rounded-lg hover:bg-purple-500/20 text-win-textSecondary hover:text-purple-300 transition">
+        <button onclick="cloneServerDirectly('${encName}', '${encScope}', '${encPath}')" title="一键克隆此服务到新配置" class="p-1.5 rounded-lg hover:bg-purple-500/20 text-win-textSecondary hover:text-purple-300 transition">
           <i data-lucide="copy-plus" class="w-3.5 h-3.5"></i>
         </button>
-        <button onclick="editServer('${escapeHtml(s.name)}', '${s.scope}', '${encodeURIComponent(s.configPath || '')}')" title="编辑" class="p-1.5 rounded-lg hover:bg-white/10 text-win-textSecondary hover:text-blue-400 transition">
+        <button onclick="editServer('${encName}', '${encScope}', '${encPath}')" title="编辑" class="p-1.5 rounded-lg hover:bg-white/10 text-win-textSecondary hover:text-blue-400 transition">
           <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
         </button>
-        <button onclick="deleteServer('${s.name}', '${s.scope}')" title="删除" class="p-1.5 rounded-lg hover:bg-rose-500/10 text-win-textSecondary hover:text-rose-400 transition">
+        <button onclick="deleteServer('${encName}', '${encScope}')" title="删除" class="p-1.5 rounded-lg hover:bg-rose-500/10 text-win-textSecondary hover:text-rose-400 transition">
           <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
         </button>
       </div>
@@ -360,7 +366,12 @@ async function toggleServer(name, scope, enabled) {
   }
 }
 
-async function testConnection(name) {
+async function testConnection(nameInput) {
+  let name = nameInput;
+  try {
+    if (typeof nameInput === 'string' && nameInput.includes('%')) name = decodeURIComponent(nameInput);
+  } catch {}
+
   const pingEl = document.getElementById(`ping-${name}`);
   if (pingEl) {
     pingEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse inline-block"></span><span class="text-amber-400 font-mono text-[10px]">测试握手中...</span>`;
@@ -381,7 +392,12 @@ async function testConnection(name) {
   }
 }
 
-async function inspectTools(name) {
+async function inspectTools(nameInput) {
+  let name = nameInput;
+  try {
+    if (typeof nameInput === 'string' && nameInput.includes('%')) name = decodeURIComponent(nameInput);
+  } catch {}
+
   openModal('modalTools');
   const title = document.getElementById('modalToolsTitle');
   const subtitle = document.getElementById('modalToolsSubtitle');
@@ -414,7 +430,14 @@ async function inspectTools(name) {
   }
 }
 
-async function deleteServer(name, scope) {
+async function deleteServer(nameInput, scopeInput) {
+  let name = nameInput;
+  let scope = scopeInput;
+  try {
+    if (typeof nameInput === 'string' && nameInput.includes('%')) name = decodeURIComponent(nameInput);
+    if (typeof scopeInput === 'string' && scopeInput.includes('%')) scope = decodeURIComponent(scopeInput);
+  } catch {}
+
   if (!confirm(`确定要彻底删除 MCP 服务 "${name}" 吗？此操作不可恢复。`)) return;
   try {
     const data = await api.deleteServer(name, scope);
@@ -429,7 +452,14 @@ async function deleteServer(name, scope) {
   }
 }
 
-async function copyServerConfig(name, scope, encodedConfigPath) {
+async function copyServerConfig(nameInput, scopeInput, encodedConfigPath) {
+  let name = nameInput;
+  let scope = scopeInput;
+  try {
+    if (typeof nameInput === 'string' && nameInput.includes('%')) name = decodeURIComponent(nameInput);
+    if (typeof scopeInput === 'string' && scopeInput.includes('%')) scope = decodeURIComponent(scopeInput);
+  } catch {}
+
   const configPath = encodedConfigPath ? decodeURIComponent(encodedConfigPath) : '';
   const server = findServer(name, scope, configPath);
   if (!server) {
@@ -461,7 +491,14 @@ async function copyServerConfig(name, scope, encodedConfigPath) {
   }
 }
 
-function cloneServerDirectly(name, scope, encodedConfigPath) {
+function cloneServerDirectly(nameInput, scopeInput, encodedConfigPath) {
+  let name = nameInput;
+  let scope = scopeInput;
+  try {
+    if (typeof nameInput === 'string' && nameInput.includes('%')) name = decodeURIComponent(nameInput);
+    if (typeof scopeInput === 'string' && scopeInput.includes('%')) scope = decodeURIComponent(scopeInput);
+  } catch {}
+
   const configPath = encodedConfigPath ? decodeURIComponent(encodedConfigPath) : '';
   const server = findServer(name, scope, configPath);
   if (!server) {
