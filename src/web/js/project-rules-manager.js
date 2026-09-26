@@ -194,7 +194,8 @@ const ProjectRulesManager = {
   },
 
   renderProjectCard(proj) {
-    const isSelected = this.selectedProject && this.selectedProject.path === proj.path;
+    const isSelected = this.selectedProject && pathResolve(this.selectedProject.path) === pathResolve(proj.path);
+    const encPath = encodeURIComponent(proj.path);
     const titles = (proj.summaryTitles || []).map(t => `
       <span class="text-[10px] px-2 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20 truncate max-w-[200px]">
         ${escapeHtml(t)}
@@ -204,7 +205,7 @@ const ProjectRulesManager = {
     return `
       <div class="fluent-card p-4 flex flex-col justify-between transition-all cursor-pointer ${
         isSelected ? 'border-purple-500/70 bg-[#25222b]' : 'hover:border-neutral-600 bg-[#1e1e21]'
-      }" onclick="ProjectRulesManager.selectProject('${escapeHtml(proj.path)}')">
+      }" onclick="ProjectRulesManager.selectProject('${encPath}', true)">
         <div>
           <div class="flex items-center justify-between gap-2 mb-1.5">
             <div class="flex items-center space-x-2 truncate">
@@ -243,21 +244,21 @@ const ProjectRulesManager = {
             ${proj.hasRules ? `
               ${proj.isInherited ? `
                 <button class="px-2 py-1 text-[11px] font-medium rounded-md bg-blue-600/30 hover:bg-blue-600/50 text-blue-200 transition"
-                        onclick="ProjectRulesManager.quickInit('${escapeHtml(proj.path)}')">
+                        onclick="ProjectRulesManager.quickInit('${encPath}')">
                   固化为专属
                 </button>
               ` : ''}
-              <button class="px-2.5 py-1 text-[11px] font-medium rounded-md bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 transition"
-                      onclick="ProjectRulesManager.selectProject('${escapeHtml(proj.path)}')">
+              <button class="px-2.5 py-1 text-[11px] font-medium rounded-md bg-purple-600 hover:bg-purple-500 text-white shadow-sm transition"
+                      onclick="ProjectRulesManager.selectProject('${encPath}', true)">
                 进入编辑
               </button>
             ` : `
               <button class="px-2.5 py-1 text-[11px] font-medium rounded-md bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 transition"
-                      onclick="ProjectRulesManager.quickInit('${escapeHtml(proj.path)}')">
+                      onclick="ProjectRulesManager.quickInit('${encPath}')">
                 一键初始化
               </button>
               <button class="px-2.5 py-1 text-[11px] font-medium rounded-md bg-blue-600/30 hover:bg-blue-600/50 text-blue-200 transition"
-                      onclick="ProjectRulesManager.copyFromGlobalFor('${escapeHtml(proj.path)}')">
+                      onclick="ProjectRulesManager.copyFromGlobalFor('${encPath}')">
                 继承全局
               </button>
             `}
@@ -267,12 +268,20 @@ const ProjectRulesManager = {
     `;
   },
 
-  async selectProject(projectPath) {
+  async selectProject(pathInput, shouldScroll = false) {
     if (this.isDirty && !confirm('当前项目规则有未保存的修改，切换将丢失修改，是否继续？')) {
       return;
     }
 
-    const proj = this.projects.find(p => p.path === projectPath);
+    let targetPath = pathInput;
+    try {
+      if (typeof pathInput === 'string' && pathInput.includes('%')) {
+        targetPath = decodeURIComponent(pathInput);
+      }
+    } catch {}
+
+    const norm = pathResolve(targetPath);
+    const proj = this.projects.find(p => pathResolve(p.path) === norm || p.path === targetPath);
     if (!proj) return;
 
     this.selectedProject = proj;
@@ -287,6 +296,13 @@ const ProjectRulesManager = {
       if (res && res.ok) {
         this.currentRules = res.rules;
         this.renderStudio(res.rules);
+        if (shouldScroll) {
+          const editorEl = document.getElementById('project-rules-textarea');
+          if (editorEl) {
+            editorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            editorEl.focus();
+          }
+        }
       }
     } catch (err) {
       showToast('读取项目规则失败: ' + err.message, 'error');
@@ -421,7 +437,13 @@ const ProjectRulesManager = {
     await this.copyFromGlobalFor(this.selectedProject.path);
   },
 
-  async copyFromGlobalFor(projectPath) {
+  async copyFromGlobalFor(pathInput) {
+    let projectPath = pathInput;
+    try {
+      if (typeof pathInput === 'string' && pathInput.includes('%')) {
+        projectPath = decodeURIComponent(pathInput);
+      }
+    } catch {}
     try {
       const res = await api.copyGlobalRulesToProject(projectPath);
       if (res && res.ok) {
@@ -454,7 +476,13 @@ const ProjectRulesManager = {
     }
   },
 
-  async quickInit(projectPath) {
+  async quickInit(pathInput) {
+    let projectPath = pathInput;
+    try {
+      if (typeof pathInput === 'string' && pathInput.includes('%')) {
+        projectPath = decodeURIComponent(pathInput);
+      }
+    } catch {}
     try {
       const res = await api.initProjectRules(projectPath, 'rule-7-concise');
       if (res && res.ok) {
