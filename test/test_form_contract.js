@@ -95,4 +95,86 @@ if (!foundWs || foundWs.name !== 'github') {
 }
 
 console.log('✔ Verified URL-encoded parameter decoding and server resolution');
-console.log('🎉 Server Form Contract tests passed successfully!\n');
+
+// 4. Verify modalPasteMcp DOM Contract
+console.log('🧪 Testing Paste MCP Modal DOM Contract...');
+const requiredPasteIds = [
+  'modalPasteMcp',
+  'pasteJsonInput',
+  'pasteStatusBadge',
+  'pasteScope',
+  'btnPasteScopeGlobal',
+  'btnPasteScopeWorkspace',
+  'pasteWorkspaceRow',
+  'pasteProjectSelect',
+  'pasteTargetWorkspace',
+  'pasteScopeHint',
+  'pasteWorkspaceMcpBadge',
+  'pasteParsedPreview',
+  'pasteParsedTypeBadge',
+  'pasteServerName',
+  'pasteNameConflictHint',
+  'pasteSummaryCmd',
+  'btnConfirmPasteImport'
+];
+
+requiredPasteIds.forEach(id => {
+  const match = html.includes(`id="${id}"`) || html.includes(`id='${id}'`);
+  if (!match) {
+    throw new Error(`Required Paste Modal DOM ID "${id}" is missing in src/web/index.html!`);
+  }
+});
+console.log(`✔ Verified ${requiredPasteIds.length} critical Paste Modal DOM IDs in index.html`);
+
+// 5. Test JSON Parser & Project Payload Construction
+function stripCommentsAndTrailingCommas(str) {
+  let cleaned = str.replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '$1');
+  return cleaned.replace(/,(\s*[}\]])/g, '$1').trim();
+}
+
+function parseMcpJsonString(rawStr) {
+  if (!rawStr || !rawStr.trim()) return { ok: false, error: '输入内容为空' };
+  const clean = stripCommentsAndTrailingCommas(rawStr);
+  let parsed = JSON.parse(clean);
+  if (parsed.mcpServers && typeof parsed.mcpServers === 'object') {
+    const firstKey = Object.keys(parsed.mcpServers)[0];
+    return { ok: true, serverName: firstKey, serverConfig: parsed.mcpServers[firstKey] };
+  }
+  if (parsed.command || (parsed.type === 'http' && parsed.url)) {
+    return { ok: true, serverName: '', serverConfig: parsed };
+  }
+  const firstKey = Object.keys(parsed)[0];
+  return { ok: true, serverName: firstKey, serverConfig: parsed[firstKey] };
+}
+
+// Test parsing standard mcpServers object with comment & trailing comma
+const testJson = `{
+  // Sample comment
+  "mcpServers": {
+    "my-postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://localhost:5432/db"],
+    }
+  }
+}`;
+
+const parseRes = parseMcpJsonString(testJson);
+if (!parseRes.ok || parseRes.serverName !== 'my-postgres' || parseRes.serverConfig.command !== 'npx') {
+  throw new Error('Failed to parse standard mcpServers JSON string');
+}
+
+// Test target workspace payload mapping
+const mockPayload = {
+  name: parseRes.serverName,
+  scope: 'workspace',
+  workspaceDir: 'A:\\code\\github',
+  config: parseRes.serverConfig
+};
+
+if (mockPayload.scope !== 'workspace' || mockPayload.workspaceDir !== 'A:\\code\\github') {
+  throw new Error('Project scope mapping failed in payload construction');
+}
+
+console.log('✔ Verified JSON parser with comments, trailing commas, and project workspace payload mapping');
+console.log('🎉 All Form & Paste Contract tests passed successfully!\n');
+

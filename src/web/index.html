@@ -741,6 +741,81 @@
       </div>
 
       <div class="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+        <!-- 1. 导入目标位置与项目选择 (始终展示) -->
+        <div class="p-3.5 bg-[#1a1a1f] border border-purple-500/25 rounded-xl space-y-3">
+          <div class="flex items-center justify-between pb-2 border-b border-white/5">
+            <span class="text-purple-300 font-semibold text-xs flex items-center space-x-1.5">
+              <i data-lucide="folder-git-2" class="w-3.5 h-3.5 text-purple-400"></i>
+              <span>导入目标位置 (Target Scope & Project) *</span>
+            </span>
+            <span class="text-[10px] text-win-textTertiary font-mono">自由选择导入到全局或指定项目</span>
+          </div>
+
+          <div class="flex items-center space-x-3">
+            <span class="text-win-textSecondary font-medium shrink-0">保存作用域:</span>
+            <div class="flex-1 flex items-center bg-[#141414] p-0.5 rounded-lg border border-win-border h-[32px] space-x-1">
+              <button type="button" id="btnPasteScopeGlobal" onclick="setPasteScope('global')" class="flex-1 h-full rounded text-[11px] font-semibold flex items-center justify-center space-x-1 transition">
+                <i data-lucide="globe" class="w-3 h-3"></i>
+                <span>全局配置</span>
+              </button>
+              <button type="button" id="btnPasteScopeWorkspace" onclick="setPasteScope('workspace')" class="flex-1 h-full rounded text-[11px] font-semibold flex items-center justify-center space-x-1 transition">
+                <i data-lucide="folder-git-2" class="w-3 h-3"></i>
+                <span>项目工作空间</span>
+              </button>
+            </div>
+            <input type="hidden" id="pasteScope" value="workspace">
+            <input type="hidden" id="pasteTargetScope" value="workspace">
+          </div>
+
+          <!-- WORKSPACE TARGET SELECTOR: PROJECTS & WORKSPACE LINKED -->
+          <div id="pasteWorkspaceRow" class="p-2.5 bg-[#141416] border border-purple-500/20 rounded-lg space-y-2">
+            <div class="flex items-center justify-between pb-1 border-b border-white/5">
+              <span class="text-[11px] font-medium text-purple-300 flex items-center space-x-1">
+                <span>选择目标 Antigravity 项目:</span>
+              </span>
+              <div class="flex items-center space-x-2">
+                <button type="button" onclick="openProjectConfigFile(document.getElementById('pasteTargetWorkspace')?.value)" class="text-[11px] text-purple-300 hover:text-white flex items-center space-x-1 transition">
+                  <i data-lucide="file-code" class="w-3 h-3 text-purple-400"></i>
+                  <span>打开配置</span>
+                </button>
+                <button type="button" onclick="browseCustomWorkspaceForPaste()" class="text-[11px] text-win-accent hover:underline flex items-center space-x-1">
+                  <i data-lucide="folder-open" class="w-3 h-3"></i>
+                  <span>浏览其它目录...</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2.5">
+              <!-- 1. 选择项目 (Project) -->
+              <div>
+                <label class="block text-win-textSecondary mb-1 font-medium flex items-center space-x-1">
+                  <span>1. 目标项目 (Project) *</span>
+                </label>
+                <select id="pasteProjectSelect" onchange="handlePasteProjectSelectChange()" class="w-full bg-[#181818] border border-win-border rounded-lg px-2.5 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-purple-400">
+                  <!-- Dynamically populated from antigravityProjects -->
+                </select>
+              </div>
+
+              <!-- 2. 选择工作空间 (Workspace) -->
+              <div>
+                <label class="block text-win-textSecondary mb-1 font-medium flex items-center space-x-1">
+                  <span>2. 对应工作空间 (Workspace) *</span>
+                </label>
+                <select id="pasteTargetWorkspace" onchange="handlePasteWorkspaceChange()" class="w-full bg-[#181818] border border-win-border rounded-lg px-2.5 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-purple-400">
+                  <!-- Dynamically populated from antigravityProjects -->
+                </select>
+              </div>
+            </div>
+
+            <!-- 目标写入路径提示与状态徽章 -->
+            <div class="flex items-center justify-between text-[11px] pt-0.5">
+              <p id="pasteScopeHint" class="text-purple-400 font-mono truncate"></p>
+              <span id="pasteWorkspaceMcpBadge" class="px-1.5 py-0.2 rounded font-mono shrink-0 ml-2"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. MCP JSON 配置内容粘贴与输入框 -->
         <div>
           <div class="flex items-center justify-between mb-1.5">
             <label class="font-medium text-win-textSecondary flex items-center space-x-1.5">
@@ -749,7 +824,7 @@
             </label>
             <span id="pasteStatusBadge" class="text-[11px] font-mono text-indigo-400"></span>
           </div>
-          <textarea id="pasteJsonInput" rows="7" oninput="handlePasteJsonChange()" placeholder="请在此直接按 Ctrl+V 粘贴 MCP JSON 代码，或点击下方【从系统剪贴板粘贴】按钮..." class="w-full bg-[#181818] border border-win-border rounded-lg p-3 text-white font-mono text-[11px] leading-relaxed focus:outline-none focus:border-indigo-500"></textarea>
+          <textarea id="pasteJsonInput" rows="6" oninput="handlePasteJsonChange()" placeholder="请在此直接按 Ctrl+V 粘贴 MCP JSON 代码，或点击下方【从系统剪贴板粘贴】按钮..." class="w-full bg-[#181818] border border-win-border rounded-lg p-3 text-white font-mono text-[11px] leading-relaxed focus:outline-none focus:border-indigo-500"></textarea>
           
           <!-- QUICK ACTION BAR BELOW TEXTAREA -->
           <div class="flex items-center justify-between mt-2 pt-1">
@@ -775,8 +850,8 @@
           </div>
         </div>
 
-        <!-- PARSED SERVER CONFIG PREVIEW -->
-        <div id="pasteParsedPreview" class="hidden p-3.5 bg-[#1a1a1f] border border-indigo-500/25 rounded-xl space-y-3">
+        <!-- 3. PARSED SERVER CONFIG PREVIEW (解析识别结果) -->
+        <div id="pasteParsedPreview" class="hidden p-3.5 bg-[#1a1a1f] border border-indigo-500/25 rounded-xl space-y-3 animate-in fade-in duration-100">
           <div class="flex items-center justify-between pb-2 border-b border-white/5">
             <span class="text-indigo-300 font-semibold text-xs flex items-center space-x-1.5">
               <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-400"></i>
@@ -785,74 +860,12 @@
             <span id="pasteParsedTypeBadge" class="px-1.5 py-0.5 rounded font-mono text-[10px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">Stdio</span>
           </div>
 
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-win-textSecondary mb-1 font-medium">导入服务名称 *</label>
-              <input type="text" id="pasteServerName" oninput="validatePasteServerName()" class="w-full bg-[#141414] border border-win-border rounded-lg px-2.5 py-1.5 text-white font-mono focus:outline-none focus:border-indigo-400 text-xs">
-              <span id="pasteNameConflictHint" class="hidden text-[10px] text-amber-400 font-mono mt-0.5 block"></span>
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-win-textSecondary font-medium">导入服务名称 *</label>
+              <span id="pasteNameConflictHint" class="hidden text-[10px] font-mono"></span>
             </div>
-            <div>
-              <label class="block text-win-textSecondary mb-1 font-medium">导入目标作用域 *</label>
-              <div class="flex items-center bg-[#141414] p-0.5 rounded-lg border border-win-border h-[32px] space-x-1">
-                <button type="button" id="btnPasteScopeGlobal" onclick="setPasteScope('global')" class="flex-1 h-full rounded text-[11px] font-semibold flex items-center justify-center space-x-1 transition">
-                  <i data-lucide="globe" class="w-3 h-3"></i>
-                  <span>全局配置</span>
-                </button>
-                <button type="button" id="btnPasteScopeWorkspace" onclick="setPasteScope('workspace')" class="flex-1 h-full rounded text-[11px] font-semibold flex items-center justify-center space-x-1 transition">
-                  <i data-lucide="folder-git-2" class="w-3 h-3"></i>
-                  <span>工作空间</span>
-                </button>
-              </div>
-              <input type="hidden" id="pasteTargetScope" value="workspace">
-            </div>
-          </div>
-
-          <!-- WORKSPACE TARGET SELECTOR: PROJECTS & WORKSPACE LINKED -->
-          <div id="pasteWorkspaceRow" class="p-3 bg-[#18181c] border border-purple-500/25 rounded-xl space-y-2.5">
-            <div class="flex items-center justify-between pb-1 border-b border-white/5">
-              <span class="font-semibold text-purple-300 text-xs flex items-center space-x-1.5">
-                <i data-lucide="folder-git-2" class="w-3.5 h-3.5 text-purple-400"></i>
-                <span>目标项目与工作空间 (Project & Workspace) *</span>
-              </span>
-              <div class="flex items-center space-x-2">
-                <button type="button" onclick="openProjectConfigFile(document.getElementById('pasteTargetWorkspace')?.value)" class="text-[11px] text-purple-300 hover:text-white flex items-center space-x-1 transition">
-                  <i data-lucide="file-code" class="w-3 h-3 text-purple-400"></i>
-                  <span>打开配置</span>
-                </button>
-                <button type="button" onclick="browseCustomWorkspaceForPaste()" class="text-[11px] text-win-accent hover:underline flex items-center space-x-1">
-                  <i data-lucide="folder-open" class="w-3 h-3"></i>
-                  <span>浏览其它目录...</span>
-                </button>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-2.5">
-              <!-- 1. 选择项目 (Project) -->
-              <div>
-                <label class="block text-win-textSecondary mb-1 font-medium flex items-center space-x-1">
-                  <span>1. 目标项目 (Project) *</span>
-                </label>
-                <select id="pasteProjectSelect" onchange="handlePasteProjectSelectChange()" class="w-full bg-[#141414] border border-win-border rounded-lg px-2.5 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-purple-400">
-                  <!-- Dynamically populated from antigravityProjects -->
-                </select>
-              </div>
-
-              <!-- 2. 选择工作空间 (Workspace) -->
-              <div>
-                <label class="block text-win-textSecondary mb-1 font-medium flex items-center space-x-1">
-                  <span>2. 对应工作空间 (Workspace) *</span>
-                </label>
-                <select id="pasteTargetWorkspace" onchange="handlePasteWorkspaceChange()" class="w-full bg-[#141414] border border-win-border rounded-lg px-2.5 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-purple-400">
-                  <!-- Dynamically populated from antigravityProjects -->
-                </select>
-              </div>
-            </div>
-
-            <!-- 目标写入路径提示与状态徽章 -->
-            <div class="flex items-center justify-between text-[11px] pt-0.5">
-              <p id="pasteScopeHint" class="text-purple-400 font-mono truncate"></p>
-              <span id="pasteWorkspaceMcpBadge" class="px-1.5 py-0.2 rounded font-mono shrink-0 ml-2"></span>
-            </div>
+            <input type="text" id="pasteServerName" oninput="validatePasteServerName()" placeholder="如 github, postgres" class="w-full bg-[#141414] border border-win-border rounded-lg px-2.5 py-1.5 text-white font-mono focus:outline-none focus:border-indigo-400 text-xs">
           </div>
 
           <!-- SUMMARY DETAILS -->

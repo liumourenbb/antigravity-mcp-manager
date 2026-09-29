@@ -49,6 +49,7 @@ function handlePasteProjectSelectChange() {
     wsSelect.value = projPath;
   }
   updatePasteScopeHint();
+  validatePasteServerName();
 }
 
 function handlePasteWorkspaceChange() {
@@ -58,12 +59,13 @@ function handlePasteWorkspaceChange() {
     projSelect.value = wsPath;
   }
   updatePasteScopeHint();
+  validatePasteServerName();
 }
 
 function updatePasteScopeHint() {
   const hint = document.getElementById('pasteScopeHint');
   const badge = document.getElementById('pasteWorkspaceMcpBadge');
-  const scope = document.getElementById('pasteScope')?.value;
+  const scope = getPasteScopeValue();
   if (!hint) return;
 
   if (scope === 'workspace') {
@@ -97,6 +99,7 @@ async function browseCustomWorkspaceForPaste() {
         antigravityProjects = res.projects || antigravityProjects;
         populatePasteProjectOptions(res.activeWorkspace);
         updatePasteScopeHint();
+        validatePasteServerName();
         showToast(`已选定导入目标项目: ${res.activeWorkspace.split('\\').pop()}`, 'success');
       }
     } catch (e) {
@@ -105,22 +108,29 @@ async function browseCustomWorkspaceForPaste() {
   }
 }
 
-function setPasteScope(scope) {
-  const input = document.getElementById('pasteScope');
-  if (input) input.value = scope;
+function getPasteScopeValue() {
+  const input = document.getElementById('pasteScope') || document.getElementById('pasteTargetScope');
+  return input?.value || 'workspace';
+}
+
+function setPasteScope(scope, preferWorkspaceDir) {
+  const input1 = document.getElementById('pasteScope');
+  const input2 = document.getElementById('pasteTargetScope');
+  if (input1) input1.value = scope;
+  if (input2) input2.value = scope;
 
   const btnGlobal = document.getElementById('btnPasteScopeGlobal');
   const btnWs = document.getElementById('btnPasteScopeWorkspace');
-  const wsSection = document.getElementById('sectionPasteWorkspaceSelect');
+  const wsSection = document.getElementById('pasteWorkspaceRow') || document.getElementById('sectionPasteWorkspaceSelect');
 
   if (scope === 'workspace') {
-    if (btnWs) btnWs.className = 'flex-1 h-full rounded-md text-xs font-semibold flex items-center justify-center space-x-1.5 bg-purple-600 text-white shadow-sm transition';
-    if (btnGlobal) btnGlobal.className = 'flex-1 h-full rounded-md text-xs font-medium flex items-center justify-center space-x-1.5 text-win-textSecondary hover:text-white transition';
+    if (btnWs) btnWs.className = 'flex-1 h-full rounded text-[11px] font-semibold flex items-center justify-center space-x-1 bg-purple-600 text-white shadow-sm transition';
+    if (btnGlobal) btnGlobal.className = 'flex-1 h-full rounded text-[11px] font-medium flex items-center justify-center space-x-1 text-win-textSecondary hover:text-white transition';
     if (wsSection) wsSection.classList.remove('hidden');
-    populatePasteProjectOptions(currentWorkspace);
+    populatePasteProjectOptions(preferWorkspaceDir || currentWorkspace);
   } else {
-    if (btnGlobal) btnGlobal.className = 'flex-1 h-full rounded-md text-xs font-semibold flex items-center justify-center space-x-1.5 bg-[#0078d4] text-white shadow-sm transition';
-    if (btnWs) btnWs.className = 'flex-1 h-full rounded-md text-xs font-medium flex items-center justify-center space-x-1.5 text-win-textSecondary hover:text-white transition';
+    if (btnGlobal) btnGlobal.className = 'flex-1 h-full rounded text-[11px] font-semibold flex items-center justify-center space-x-1 bg-[#0078d4] text-white shadow-sm transition';
+    if (btnWs) btnWs.className = 'flex-1 h-full rounded text-[11px] font-medium flex items-center justify-center space-x-1 text-win-textSecondary hover:text-white transition';
     if (wsSection) wsSection.classList.add('hidden');
   }
 
@@ -177,19 +187,19 @@ function clearPasteInput() {
 function openPasteModal(initialJson = '') {
   openModal('modalPasteMcp');
   const textarea = document.getElementById('pasteJsonInput');
-  const targetScope = currentScopeFilter === 'workspace' ? 'workspace' : 'global';
-  setPasteScope(targetScope);
+  const targetScope = currentScopeFilter === 'workspace' ? 'workspace' : (currentScopeFilter === 'global' ? 'global' : 'workspace');
+  setPasteScope(targetScope, currentWorkspace);
 
   if (initialJson) {
-    textarea.value = initialJson;
+    if (textarea) textarea.value = initialJson;
     handlePasteJsonChange();
   } else {
-    textarea.value = '';
+    if (textarea) textarea.value = '';
     handlePasteJsonChange();
     readFromClipboardToModal(false);
   }
 
-  setTimeout(() => textarea.focus(), 150);
+  if (textarea) setTimeout(() => textarea.focus(), 150);
 }
 
 function stripCommentsAndTrailingCommas(str) {
@@ -281,48 +291,94 @@ function suggestServerName(config, fallbackKey) {
   return 'new-mcp-server';
 }
 
+function renderPasteSummaryDetails(conf, isHttp) {
+  const cmdEl = document.getElementById('pasteSummaryCmd');
+  if (cmdEl) cmdEl.innerText = isHttp ? (conf.url || '未指定 URL') : (conf.command || '未指定命令');
+
+  const argsRow = document.getElementById('pasteSummaryArgsRow');
+  const argsEl = document.getElementById('pasteSummaryArgs');
+  if (argsRow && argsEl) {
+    if (!isHttp && conf.args && conf.args.length > 0) {
+      argsRow.classList.remove('hidden');
+      argsEl.innerText = conf.args.join(' ');
+    } else {
+      argsRow.classList.add('hidden');
+    }
+  }
+
+  const envRow = document.getElementById('pasteSummaryEnvRow');
+  const envEl = document.getElementById('pasteSummaryEnv');
+  if (envRow && envEl) {
+    const envKeys = conf.env ? Object.keys(conf.env) : [];
+    if (envKeys.length > 0) {
+      envRow.classList.remove('hidden');
+      envEl.innerText = envKeys.join(', ');
+    } else {
+      envRow.classList.add('hidden');
+    }
+  }
+}
+
 function updatePastePreviewUI(result) {
   const badgeStatus = document.getElementById('pasteStatusBadge');
-  const details = document.getElementById('pasteParsedDetails');
-  const nameInput = document.getElementById('pasteServerName');
+  const errBox = document.getElementById('pasteErrorMsg');
+  const errText = document.getElementById('pasteErrorText');
+  const previewBox = document.getElementById('pasteParsedPreview');
   const btnConfirm = document.getElementById('btnConfirmPasteImport');
+  const nameInput = document.getElementById('pasteServerName');
 
   if (!result || !result.ok) {
     lastPastedParseResult = null;
-    badgeStatus.innerText = result ? '格式异常' : '等待粘贴';
-    badgeStatus.className = 'text-[10px] px-2 py-0.5 rounded-full font-mono bg-white/5 text-win-textTertiary';
-    details.innerHTML = `<span class="text-rose-400">${result ? escapeHtml(result.error) : '请在上方粘贴有效 JSON 配置'}</span>`;
-    btnConfirm.classList.add('opacity-50', 'cursor-not-allowed');
-    btnConfirm.disabled = true;
+    if (badgeStatus) {
+      badgeStatus.innerText = result ? '格式异常' : '等待粘贴';
+      badgeStatus.className = 'text-[11px] font-mono ' + (result ? 'text-rose-400' : 'text-indigo-400');
+    }
+    if (errBox && errText) {
+      if (result && result.error) {
+        errText.innerText = result.error;
+        errBox.classList.remove('hidden');
+      } else {
+        errBox.classList.add('hidden');
+      }
+    }
+    if (previewBox) previewBox.classList.add('hidden');
+    if (btnConfirm) {
+      btnConfirm.classList.add('opacity-50', 'cursor-not-allowed');
+      btnConfirm.disabled = true;
+    }
     return;
   }
 
   lastPastedParseResult = result;
-  badgeStatus.innerText = '解析成功';
-  badgeStatus.className = 'text-[10px] px-2 py-0.5 rounded-full font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
-  btnConfirm.classList.remove('opacity-50', 'cursor-not-allowed');
-  btnConfirm.disabled = false;
+  if (errBox) errBox.classList.add('hidden');
+  if (badgeStatus) {
+    badgeStatus.innerText = '解析成功';
+    badgeStatus.className = 'text-[11px] font-mono text-emerald-400 font-bold';
+  }
+  if (previewBox) previewBox.classList.remove('hidden');
+  if (btnConfirm) {
+    btnConfirm.classList.remove('opacity-50', 'cursor-not-allowed');
+    btnConfirm.disabled = false;
+  }
 
   const conf = result.serverConfig || {};
   const isHttp = conf.type === 'http' || Boolean(conf.url);
-  const typeText = isHttp ? 'HTTP' : 'Stdio';
-  const targetName = suggestServerName(conf, result.serverName);
+  const typeBadge = document.getElementById('pasteParsedTypeBadge');
+  if (typeBadge) {
+    typeBadge.innerText = isHttp ? 'HTTP / SSE' : 'Stdio';
+    typeBadge.className = isHttp 
+      ? 'px-1.5 py-0.5 rounded font-mono text-[10px] bg-blue-500/10 text-blue-300 border border-blue-500/20'
+      : 'px-1.5 py-0.5 rounded font-mono text-[10px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/20';
+  }
 
-  if (nameInput && (!nameInput.value || nameInput.value.trim() === '')) {
+  const targetName = suggestServerName(conf, result.serverName);
+  if (nameInput) {
     nameInput.value = targetName;
   }
 
-  details.innerHTML = `
-    <div class="flex items-center space-x-2">
-      <span class="text-[10px] px-1.5 py-0.2 rounded ${isHttp ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300'} font-mono">${typeText}</span>
-      <span class="font-bold text-white">${escapeHtml(isHttp ? conf.url : conf.command)}</span>
-    </div>
-    <div class="text-[10px] text-win-textTertiary truncate">
-      ${conf.args && conf.args.length > 0 ? `参数: [${conf.args.join(', ')}]` : '无额外启动参数'}
-    </div>
-  `;
-
+  renderPasteSummaryDetails(conf, isHttp);
   validatePasteServerName();
+  if (window.lucide) lucide.createIcons();
 }
 
 function handlePasteJsonChange() {
@@ -338,24 +394,23 @@ function handlePasteJsonChange() {
 function validatePasteServerName() {
   const nameInput = document.getElementById('pasteServerName');
   const hint = document.getElementById('pasteNameConflictHint');
-  const scope = document.getElementById('pasteScope')?.value;
+  const scope = getPasteScopeValue();
   const name = (nameInput?.value || '').trim();
-
   if (!hint) return;
 
   if (!name) {
-    hint.innerText = '* 请输入服务名称';
-    hint.className = 'text-[11px] text-rose-400';
+    hint.innerText = '* 请输入服务标识名称';
+    hint.className = 'text-[10px] text-rose-400 font-mono block';
     return;
   }
 
   const conflict = allServers.find(s => s.name.toLowerCase() === name.toLowerCase() && s.scope === scope);
   if (conflict) {
-    hint.innerText = `* 同名服务已存在于 [${scope === 'global' ? '全局' : '项目'}]，确认导入将直接覆盖更新配置`;
-    hint.className = 'text-[11px] text-amber-300';
+    hint.innerText = `* 同名服务已存在于 [${scope === 'global' ? '全局配置' : '选定项目'}]，确认导入将直接覆盖同名配置`;
+    hint.className = 'text-[10px] text-amber-300 font-mono block';
   } else {
-    hint.innerText = '服务名称可用';
-    hint.className = 'text-[11px] text-emerald-400';
+    hint.innerText = '✓ 服务名称可用';
+    hint.className = 'text-[10px] text-emerald-400 font-mono block';
   }
 }
 
@@ -399,7 +454,7 @@ async function executePasteImport() {
     return;
   }
 
-  const scope = document.getElementById('pasteScope')?.value || 'workspace';
+  const scope = getPasteScopeValue();
   const targetWs = scope === 'workspace' 
     ? (document.getElementById('pasteTargetWorkspace')?.value || currentWorkspace)
     : undefined;
@@ -409,9 +464,14 @@ async function executePasteImport() {
   try {
     const res = await api.saveServer(payload);
     if (res && res.ok) {
-      showToast(`已成功导入 MCP 服务 [${name}] 到 ${scope === 'global' ? '全局' : '项目工作区'}`, 'success');
+      showToast(`已成功导入 MCP 服务 [${name}] 到 ${scope === 'global' ? '全局配置' : '项目工作区'}`, 'success');
       closeModal('modalPasteMcp');
       setScopeFilter(scope);
+      if (scope === 'workspace' && targetWs && targetWs !== currentWorkspace) {
+        if (typeof switchWorkspace === 'function') {
+          await switchWorkspace(targetWs);
+        }
+      }
       await fetchServers();
       await refreshProjects(false);
     } else {
