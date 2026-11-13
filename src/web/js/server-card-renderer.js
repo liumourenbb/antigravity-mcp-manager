@@ -161,8 +161,8 @@ function updateMcpTooltipPosition(e) {
   const tooltip = document.getElementById('mcpGlobalTooltip');
   if (!tooltip || tooltip.classList.contains('hidden')) return;
 
-  const tipWidth = 330;
-  const tipHeight = 160;
+  const tipWidth = tooltip.offsetWidth || 350;
+  const tipHeight = tooltip.offsetHeight || 175;
   let x = e.clientX + 14;
   let y = e.clientY + 14;
 
@@ -388,8 +388,7 @@ function renderServerCardHtml(s, info, searchKeyword) {
     <div class="fluent-card p-4 flex flex-col justify-between transition-all duration-200 cursor-default group/card ${s.disabled ? 'opacity-65 hover:opacity-100' : ''} ${info.isWs ? 'hover:border-purple-500/50 hover:shadow-xl hover:shadow-purple-500/10' : 'hover:border-blue-500/50 hover:shadow-xl hover:shadow-blue-500/10'}"
          onmouseenter="handleMcpMouseEnter(event, '${escapeHtml(s.name)}', '${s.scope}', '${encodeURIComponent(s.configPath || '')}')"
          onmouseleave="handleMcpMouseLeave()"
-         onmousemove="updateMcpTooltipPosition(event)"
-         title="【${escapeHtml(s.name)}】&#10;所属项目: ${escapeHtml(info.projectName)}&#10;工作空间: ${escapeHtml(info.workspacePath)}&#10;配置文件: ${escapeHtml(info.configPath)}">
+         onmousemove="updateMcpTooltipPosition(event)">
       <div>
         ${renderCardHeaderHtml(s, isHttp, scopeBadge, typeBadge, searchKeyword)}
 
@@ -401,8 +400,8 @@ function renderServerCardHtml(s, info, searchKeyword) {
         <div class="mt-3 py-1.5 px-2.5 rounded-lg ${info.isWs ? 'bg-gradient-to-r from-purple-950/40 via-purple-900/15 to-transparent border border-purple-500/25 text-purple-200' : 'bg-gradient-to-r from-blue-950/35 via-blue-900/15 to-transparent border border-blue-500/20 text-blue-200'} flex items-center justify-between text-[11px] font-mono">
           <div class="flex items-center space-x-1.5 truncate max-w-[80%]">
             <i data-lucide="${info.isWs ? 'folder-git-2' : 'globe'}" class="w-3.5 h-3.5 ${info.isWs ? 'text-purple-400' : 'text-blue-400'} shrink-0"></i>
-            <span class="font-bold text-white truncate" title="项目名: ${escapeHtml(info.projectName)}">${escapeHtml(info.projectName)}</span>
-            <span class="text-win-textTertiary text-[10px] truncate max-w-[130px]" title="工作空间: ${escapeHtml(info.workspacePath)}">(${escapeHtml(info.workspacePath)})</span>
+            <span class="font-bold text-white truncate">${escapeHtml(info.projectName)}</span>
+            <span class="text-win-textTertiary text-[10px] truncate max-w-[130px]">(${escapeHtml(info.workspacePath)})</span>
           </div>
           <span class="text-[10px] shrink-0 font-sans opacity-85 px-1.5 py-0.2 rounded bg-white/5 border border-white/5">${escapeHtml(info.scopeBadgeText.split(' ')[0])}</span>
         </div>

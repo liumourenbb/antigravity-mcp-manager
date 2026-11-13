@@ -158,7 +158,15 @@ async function runThemeTests() {
   assert.strictEqual(ctx.metaEl.getAttribute('content'), 'dark');
   assert.strictEqual(ctx.labelEl.textContent, '暗夜');
 
-  // 3. HTTP static asset serving & traversal safety
+  // 3. Hover tooltip Light Mode & no-duplicate-tooltip contract checks
+  const cssSource = fs.readFileSync(path.join(rootDir, 'src/web/css/theme.css'), 'utf8');
+  assert(cssSource.includes('.bg-\\[\\#1c1c22\\]\\/95'), 'theme.css must override bg-[#1c1c22]/95 in light mode');
+  assert(cssSource.includes('html:not(.dark) #mcpGlobalTooltip'), 'theme.css must adapt #mcpGlobalTooltip in light mode');
+
+  const cardRendererSource = fs.readFileSync(path.join(rootDir, 'src/web/js/server-card-renderer.js'), 'utf8');
+  assert(!cardRendererSource.includes('title="【'), 'Card must not keep native title tooltip alongside custom #mcpGlobalTooltip');
+
+  // 4. HTTP static asset serving & traversal safety
   const { server, url } = await startServer({ port: 0, host: '127.0.0.1' });
   try {
     const cssRes = await fetchUrl(`${url}/css/theme.css`);

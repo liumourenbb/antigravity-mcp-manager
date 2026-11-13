@@ -338,9 +338,11 @@ html:not(.dark) .bg-\[\#1a1a1d\] { background-color: #eef2f7; }
 html:not(.dark) .bg-\[\#1a1a1f\] { background-color: #eef2f7; }
 html:not(.dark) .bg-\[\#1c1c1c\] { background-color: #e7ecf4; }
 html:not(.dark) .bg-\[\#1c1c1f\] { background-color: #f8f9fc; }
-html:not(.dark) .bg-\[\#1c1c22\] { background-color: #eef2f7; }
+html:not(.dark) .bg-\[\#1c1c22\],
+html:not(.dark) .bg-\[\#1c1c22\]\/95 { background-color: rgba(250, 252, 255, 0.98); }
 html:not(.dark) .bg-\[\#1e1e1e\] { background-color: #e9eef6; }
 html:not(.dark) .bg-\[\#1e1e21\] { background-color: #f8f9fc; }
+html:not(.dark) .bg-\[\#1e1e24\] { background-color: #eef2f7; }
 html:not(.dark) .bg-\[\#1f1f1f\] { background-color: #eef2f7; }
 html:not(.dark) .bg-\[\#202024\] { background-color: #e8edf5; }
 html:not(.dark) .bg-\[\#23232a\] { background-color: #dde4ef; }
@@ -533,7 +535,13 @@ html:not(.dark) :is(
 }
 html:not(.dark) #barWorkspaceName { color: #1e293b; }
 
-/* Modal Shadow Softening in Light Mode */
+/* Modal & Hover Tooltip Light Mode Surfaces */
+html:not(.dark) #mcpGlobalTooltip {
+  background-color: rgba(250, 252, 255, 0.98);
+  color: #1e293b;
+  border-color: rgba(30, 41, 59, 0.20);
+  box-shadow: 0 16px 38px -6px rgba(15, 23, 42, 0.18), 0 4px 14px rgba(15, 23, 42, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+}
 html:not(.dark) .shadow-\[0_12px_40px_rgba\(0\,0\,0\,0\.65\)\,inset_0_1px_0_0_rgba\(255\,255\,255\,0\.1\)\] {
   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.16), 0 0 0 1px rgba(30, 41, 59, 0.10);
 }
