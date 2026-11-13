@@ -15,7 +15,26 @@ function renderPresetsView() {
   const container = document.getElementById('presetsGrid');
   if (!container) return;
 
-  container.innerHTML = presetsCache.map(p => `
+  const search = (document.getElementById('presetSearchInput')?.value || '').toLowerCase().trim();
+  let list = presetsCache || [];
+  if (search) {
+    list = list.filter(p =>
+      (p.name || '').toLowerCase().includes(search) ||
+      (p.description || '').toLowerCase().includes(search) ||
+      (p.category || '').toLowerCase().includes(search)
+    );
+  }
+
+  if (list.length === 0) {
+    container.innerHTML = `
+      <div class="col-span-full fluent-card p-8 text-center text-xs text-win-textSecondary">
+        未找到名称匹配 "${escapeHtml(search)}" 的预设模板。
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = list.map(p => `
     <div class="fluent-card p-4 flex flex-col justify-between">
       <div class="space-y-2">
         <div class="flex items-center space-x-2">

@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow, shell, clipboard } from 'electron';
+import { ipcMain, dialog, BrowserWindow, shell, clipboard, nativeTheme } from 'electron';
 import { getServers, toggleServer, saveServer, deleteServer } from '../core/config.js';
 import { testServerConnection } from '../core/diagnostics.js';
 import { getServerTools } from '../core/tools.js';
@@ -144,10 +144,10 @@ function registerServerCrudIpcHandlers() {
     }
   });
 
-  ipcMain.handle('mcp:toggleServer', async (event, { name, scope, enabled, workspaceDir }) => {
+  ipcMain.handle('mcp:toggleServer', async (event, { name, scope, enabled, workspaceDir, configPath }) => {
     try {
       const effectiveWs = workspaceDir || getDefaultWorkspaceDir();
-      const updated = toggleServer(name, enabled, scope || 'global', effectiveWs);
+      const updated = toggleServer(name, enabled, scope || 'global', effectiveWs, configPath);
       return { ok: true, server: updated };
     } catch (err) {
       return { ok: false, error: err.message };
@@ -168,10 +168,10 @@ function registerServerCrudIpcHandlers() {
     }
   });
 
-  ipcMain.handle('mcp:deleteServer', async (event, { name, scope, workspaceDir }) => {
+  ipcMain.handle('mcp:deleteServer', async (event, { name, scope, workspaceDir, configPath }) => {
     try {
       const effectiveWs = workspaceDir || getDefaultWorkspaceDir();
-      const deleted = deleteServer(name, scope || 'global', effectiveWs);
+      const deleted = deleteServer(name, scope || 'global', effectiveWs, configPath);
       return { ok: true, deleted };
     } catch (err) {
       return { ok: false, error: err.message };
@@ -247,7 +247,32 @@ function registerDiagnosticsAndBackupIpcHandlers() {
 }
 
 /**
- * Registers IPC handlers for system native capabilities (Clipboard, etc.).
+ * Applies theme mode to Electron nativeTheme and Windows 11 titleBarOverlay.
+ */
+function applyNativeWindowTheme(win, theme = 'dark') {
+  const source = ['light', 'dark', 'system'].includes(theme) ? theme : 'dark';
+  nativeTheme.themeSource = source;
+  const resolved = source === 'system' ? (nativeTheme.shouldUseDarkColors ? 'dark' : 'light') : source;
+  if (win && !win.isDestroyed()) {
+    const palette = resolved === 'light'
+      ? { color: '#e9edf4', symbolColor: '#1e293b', backgroundColor: '#dfe5ee' }
+      : { color: '#181b23', symbolColor: '#dfe5ef', backgroundColor: '#13161d' };
+    try {
+      if (typeof win.setTitleBarOverlay === 'function') {
+        win.setTitleBarOverlay({ color: palette.color, symbolColor: palette.symbolColor, height: 38 });
+      }
+      if (typeof win.setBackgroundColor === 'function') {
+        win.setBackgroundColor(palette.backgroundColor);
+      }
+    } catch (_) {
+      // Ignore platforms without titleBarOverlay support
+    }
+  }
+  return resolved;
+}
+
+/**
+ * Registers IPC handlers for system native capabilities (Clipboard, Theme, etc.).
  */
 function registerSystemIpcHandlers() {
   ipcMain.handle('mcp:readClipboard', async () => {
@@ -262,6 +287,16 @@ function registerSystemIpcHandlers() {
     try {
       clipboard.writeText(text || '');
       return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('mcp:setTheme', async (event, theme) => {
+    try {
+      const win = BrowserWindow.fromWebContents(event.sender) || BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0];
+      const resolved = applyNativeWindowTheme(win, theme);
+      return { ok: true, theme: resolved };
     } catch (err) {
       return { ok: false, error: err.message };
     }

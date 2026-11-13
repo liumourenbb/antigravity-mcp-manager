@@ -19,12 +19,21 @@ function updateStats() {
   const enabled = allServers.filter(s => !s.disabled && s.scope !== 'other').length;
   const disabled = allServers.filter(s => s.disabled || s.scope === 'other').length;
   const wsCount = allServers.filter(s => s.scope === 'workspace').length;
+  const curWsCount = allServers.filter(s => s.scope === 'workspace' && (typeof isServerBelongToWorkspace === 'function' ? isServerBelongToWorkspace(s, currentWorkspace) : true)).length;
 
   document.getElementById('statTotal').innerText = total;
   document.getElementById('badgeServerCount').innerText = total;
   document.getElementById('statEnabled').innerText = enabled;
   document.getElementById('statDisabled').innerText = disabled;
-  document.getElementById('statWorkspace').innerText = wsCount;
+  
+  const elWs = document.getElementById('statWorkspace');
+  if (elWs) {
+    if (currentWorkspace && curWsCount !== wsCount) {
+      elWs.innerHTML = `${curWsCount} <span class="text-xs text-purple-300/70 font-normal">/ 全部 ${wsCount}</span>`;
+    } else {
+      elWs.innerText = wsCount;
+    }
+  }
 
   const badgeDisabled = document.getElementById('badgeDisabledCount');
   if (badgeDisabled) {
@@ -68,8 +77,31 @@ function setScopeFilter(scope) {
   renderServers();
 }
 
+function initGlobalSearchShortcut() {
+  window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+      const active = document.activeElement;
+      const isInput = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
+      if (!isInput || active.id === 'serverSearchInput' || active.id === 'searchInput') {
+        e.preventDefault();
+        const target = document.getElementById('serverSearchInput') || document.getElementById('searchInput');
+        if (target) {
+          target.focus();
+          target.select();
+        }
+      }
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
+  if (window.ThemeManager && typeof ThemeManager.initThemeManager === 'function') {
+    ThemeManager.initThemeManager();
+  }
+  initGlobalSearchShortcut();
   await initWorkspace();
+  await refreshProjects(false);
+  startAutoProjectSync();
   await fetchServers();
   await fetchPresets();
   checkJetBrains();
@@ -80,6 +112,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const prm = window.ProjectRulesManager || (typeof ProjectRulesManager !== 'undefined' ? ProjectRulesManager : null);
   if (prm && typeof prm.init === 'function') {
     prm.init();
+  }
+  if (typeof updateViewModeUI === 'function') {
+    updateViewModeUI();
   }
   if (window.lucide) lucide.createIcons();
 });

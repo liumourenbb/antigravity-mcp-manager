@@ -11,9 +11,9 @@ contextBridge.exposeInMainWorld('mcpApi', {
   openWorkspaceConfigFile: (dir) => ipcRenderer.invoke('mcp:openWorkspaceConfigFile', dir),
   showWorkspaceConfigInFolder: (dir) => ipcRenderer.invoke('mcp:showWorkspaceConfigInFolder', dir),
   getServers: (scope, workspaceDir) => ipcRenderer.invoke('mcp:getServers', scope, workspaceDir),
-  toggleServer: (name, scope, enabled, workspaceDir) => ipcRenderer.invoke('mcp:toggleServer', { name, scope, enabled, workspaceDir }),
+  toggleServer: (name, scope, enabled, workspaceDir, configPath) => ipcRenderer.invoke('mcp:toggleServer', { name, scope, enabled, workspaceDir, configPath }),
   saveServer: (data) => ipcRenderer.invoke('mcp:saveServer', data),
-  deleteServer: (name, scope, workspaceDir) => ipcRenderer.invoke('mcp:deleteServer', { name, scope, workspaceDir }),
+  deleteServer: (name, scope, workspaceDir, configPath) => ipcRenderer.invoke('mcp:deleteServer', { name, scope, workspaceDir, configPath }),
   testServer: (name, workspaceDir) => ipcRenderer.invoke('mcp:testServer', name, workspaceDir),
   getTools: (name) => ipcRenderer.invoke('mcp:getTools', name),
   getPresets: () => ipcRenderer.invoke('mcp:getPresets'),
@@ -34,4 +34,5 @@ contextBridge.exposeInMainWorld('mcpApi', {
   copyGlobalRulesToProject: (projectDir) => ipcRenderer.invoke('mcp:copyGlobalRulesToProject', { projectDir }),
   batchSyncGlobalRules: (projectPaths, overwriteExisting) => ipcRenderer.invoke('mcp:batchSyncGlobalRules', { projectPaths, overwriteExisting }),
   getAntigravityLiveRules: () => ipcRenderer.invoke('mcp:getAntigravityLiveRules'),
+  setTheme: (theme) => ipcRenderer.invoke('mcp:setTheme', theme),
 });

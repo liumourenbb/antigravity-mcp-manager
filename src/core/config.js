@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { PATHS, findWorkspaceMcpConfig, getDefaultWorkspaceDir, ensureDir } from './paths.js';
 import { createBackup } from './backup.js';
+import { listAntigravityProjects } from './workspaces.js';
 
 /**
  * Safely reads and parses a JSON config file.
@@ -13,7 +14,9 @@ export function readConfigFile(filePath) {
     return { mcpServers: {} };
   }
   try {
-    const raw = fs.readFileSync(filePath, 'utf8');
+    let raw = fs.readFileSync(filePath, 'utf8').replace(/^\uFEFF/, '').trim();
+    if (!raw) return { mcpServers: {} };
+    raw = raw.replace(/,(\s*[}\]])/g, '$1');
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return { mcpServers: {} };
     if (!parsed.mcpServers || typeof parsed.mcpServers !== 'object') {
@@ -96,17 +99,82 @@ export function normalizeServer(name, config, scope, configPath) {
  * @param {string} [workspaceDir]
  * @returns {Array<object>}
  */
-export function getServers(scope = 'all', workspaceDir) {
+function collectOtherPoolServers(servers) {
+  if (!fs.existsSync(PATHS.otherConfig)) return;
+  try {
+    const rawOther = fs.readFileSync(PATHS.otherConfig, 'utf8');
+    const parsed = JSON.parse(rawOther);
+    const entries = parsed.mcpServers || parsed;
+    for (const [name, cfg] of Object.entries(entries)) {
+      const existing = servers.find(s => s.name === name);
+      if (!existing) {
+        servers.push(normalizeServer(name, cfg, 'other', PATHS.otherConfig));
+      }
+    }
+  } catch (e) {
+    console.error(`[config] Error reading other config:`, e.message);
+  }
+}
+
+function collectSingleWorkspaceServers(servers, workspaceConfigPath, effectiveWs) {
+  if (!workspaceConfigPath || !fs.existsSync(workspaceConfigPath)) return;
+  try {
+    const wsData = readConfigFile(workspaceConfigPath);
+    for (const [name, cfg] of Object.entries(wsData.mcpServers || {})) {
+      const item = normalizeServer(name, cfg, 'workspace', workspaceConfigPath);
+      item.workspaceDir = effectiveWs;
+      item.workspaceName = path.basename(effectiveWs);
+      item.isCurrentWorkspace = true;
+      servers.push(item);
+    }
+  } catch (e) {
+    console.error(`[config] Error reading single workspace config:`, e.message);
+  }
+}
+
+function collectAllWorkspacesServers(servers, currentActiveWs) {
+  const seenConfigs = new Set();
+  const projects = listAntigravityProjects();
+  for (const p of projects) {
+    if (!p.configPath || !fs.existsSync(p.configPath)) continue;
+    const norm = path.resolve(p.configPath).toLowerCase();
+    if (seenConfigs.has(norm)) continue;
+    seenConfigs.add(norm);
+    try {
+      const wsData = readConfigFile(p.configPath);
+      for (const [name, cfg] of Object.entries(wsData.mcpServers || {})) {
+        const item = normalizeServer(name, cfg, 'workspace', p.configPath);
+        item.workspaceDir = p.path;
+        item.workspaceName = p.name;
+        item.isCurrentWorkspace = p.isCurrent || (p.path.toLowerCase() === currentActiveWs);
+        item.projectSource = p.source;
+        servers.push(item);
+      }
+    } catch (e) {
+      console.error(`[config] Error reading workspace config for ${p.name}:`, e.message);
+    }
+  }
+}
+
+/**
+ * Retrieves servers across scopes, aggregating all Antigravity workspace projects.
+ * @param {'all'|'global'|'workspace'|'other'} [scope='all']
+ * @param {string} [workspaceDir]
+ * @param {object} [options={}]
+ * @returns {Array<object>}
+ */
+export function getServers(scope = 'all', workspaceDir, options = {}) {
   const isSystemDir = !workspaceDir || /^[a-zA-Z]:\\(windows|program files)/i.test(workspaceDir);
   const effectiveWs = isSystemDir ? getDefaultWorkspaceDir() : workspaceDir;
   const servers = [];
   const workspaceConfigPath = findWorkspaceMcpConfig(effectiveWs);
+  const shouldCollectAll = options.allWorkspaces !== false;
 
   // 1. Global
   if (scope === 'all' || scope === 'global') {
     try {
       const globalData = readConfigFile(PATHS.globalConfig);
-      for (const [name, cfg] of Object.entries(globalData.mcpServers)) {
+      for (const [name, cfg] of Object.entries(globalData.mcpServers || {})) {
         servers.push(normalizeServer(name, cfg, 'global', PATHS.globalConfig));
       }
     } catch (e) {
@@ -114,40 +182,47 @@ export function getServers(scope = 'all', workspaceDir) {
     }
   }
 
-  // 2. Workspace
-  if ((scope === 'all' || scope === 'workspace') && workspaceConfigPath) {
-    try {
-      const wsData = readConfigFile(workspaceConfigPath);
-      for (const [name, cfg] of Object.entries(wsData.mcpServers)) {
-        servers.push(normalizeServer(name, cfg, 'workspace', workspaceConfigPath));
+  // 2. Workspace: All Antigravity projects or single specified workspace
+  if (scope === 'all' || scope === 'workspace') {
+    if (shouldCollectAll) {
+      collectAllWorkspacesServers(servers, effectiveWs.toLowerCase());
+      if (workspaceConfigPath && !servers.some(s => s.configPath && path.resolve(s.configPath).toLowerCase() === path.resolve(workspaceConfigPath).toLowerCase())) {
+        collectSingleWorkspaceServers(servers, workspaceConfigPath, effectiveWs);
       }
-    } catch (e) {
-      console.error(`[config] Error reading workspace config:`, e.message);
+    } else {
+      collectSingleWorkspaceServers(servers, workspaceConfigPath, effectiveWs);
     }
   }
 
-  // 3. Other / Inactive Pool (User's manual pool)
+  // 3. Other / Inactive Pool
   if (scope === 'all' || scope === 'other') {
-    if (fs.existsSync(PATHS.otherConfig)) {
-      try {
-        const rawOther = fs.readFileSync(PATHS.otherConfig, 'utf8');
-        const parsed = JSON.parse(rawOther);
-        // mcp_other.json may be either { mcpServers: {...} } or directly { serverName: {...} }
-        const entries = parsed.mcpServers || parsed;
-        for (const [name, cfg] of Object.entries(entries)) {
-          // If already in servers under global, skip or distinguish
-          const existing = servers.find(s => s.name === name);
-          if (!existing) {
-            servers.push(normalizeServer(name, cfg, 'other', PATHS.otherConfig));
-          }
-        }
-      } catch (e) {
-        console.error(`[config] Error reading other config:`, e.message);
-      }
-    }
+    collectOtherPoolServers(servers);
   }
 
   return servers;
+}
+
+/**
+ * Finds a target server matching name, scope, workspaceDir, or exact configPath.
+ * @param {Array<object>} servers
+ * @param {string} name
+ * @param {string} scope
+ * @param {string} [workspaceDir]
+ * @param {string} [configPath]
+ * @returns {object|undefined}
+ */
+export function findTargetServer(servers, name, scope, workspaceDir, configPath) {
+  if (configPath) {
+    const norm = path.resolve(configPath).toLowerCase();
+    const exact = servers.find(s => s.name === name && s.configPath && path.resolve(s.configPath).toLowerCase() === norm);
+    if (exact) return exact;
+  }
+  if (workspaceDir && (scope === 'workspace' || scope === 'all')) {
+    const wsNorm = path.resolve(workspaceDir).toLowerCase();
+    const wsMatch = servers.find(s => s.name === name && s.scope === 'workspace' && s.workspaceDir && path.resolve(s.workspaceDir).toLowerCase() === wsNorm);
+    if (wsMatch) return wsMatch;
+  }
+  return servers.find(s => s.name === name && (scope === 'all' || s.scope === scope));
 }
 
 /**
@@ -156,13 +231,14 @@ export function getServers(scope = 'all', workspaceDir) {
  * @param {boolean} [targetState] If undefined, inverts current state
  * @param {string} [scope='global']
  * @param {string} [workspaceDir=process.cwd()]
+ * @param {string} [preferConfigPath]
  * @returns {object} updated server
  */
-export function toggleServer(name, targetState, scope = 'global', workspaceDir) {
+export function toggleServer(name, targetState, scope = 'global', workspaceDir, preferConfigPath) {
   const isSystemDir = !workspaceDir || /^[a-zA-Z]:\\(windows|program files)/i.test(workspaceDir);
   const effectiveWs = isSystemDir ? getDefaultWorkspaceDir() : workspaceDir;
   const servers = getServers('all', effectiveWs);
-  const target = servers.find(s => s.name === name && (scope === 'all' || s.scope === scope));
+  const target = findTargetServer(servers, name, scope, effectiveWs, preferConfigPath);
 
   if (!target) {
     throw new Error(`Server "${name}" not found in scope "${scope}"`);
@@ -302,13 +378,14 @@ export function saveServer(name, serverConfig, scope = 'global', workspaceDir, m
  * @param {string} name
  * @param {'all'|'global'|'workspace'|'other'} [scope='global']
  * @param {string} [workspaceDir=process.cwd()]
+ * @param {string} [preferConfigPath]
  * @returns {boolean}
  */
-export function deleteServer(name, scope = 'global', workspaceDir) {
+export function deleteServer(name, scope = 'global', workspaceDir, preferConfigPath) {
   const isSystemDir = !workspaceDir || /^[a-zA-Z]:\\(windows|program files)/i.test(workspaceDir);
   const effectiveWs = isSystemDir ? getDefaultWorkspaceDir() : workspaceDir;
   const servers = getServers('all', effectiveWs);
-  const target = servers.find(s => s.name === name && (scope === 'all' || s.scope === scope));
+  const target = findTargetServer(servers, name, scope, effectiveWs, preferConfigPath);
 
   if (!target) {
     throw new Error(`Server "${name}" not found in scope "${scope}"`);

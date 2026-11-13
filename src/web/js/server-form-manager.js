@@ -141,17 +141,49 @@ function updateFormScopeHint() {
   }
 }
 
+function renderFormPresetSuggestions(name) {
+  const box = document.getElementById('boxPresetSuggestions');
+  if (!box) return;
+  const q = (name || '').toLowerCase().trim();
+  if (!q || typeof presetsCache === 'undefined' || !presetsCache) {
+    box.classList.add('hidden');
+    box.innerHTML = '';
+    return;
+  }
+  const matched = presetsCache.filter(p => (p.name || '').toLowerCase().includes(q) || (p.category || '').toLowerCase().includes(q)).slice(0, 3);
+  if (matched.length === 0) {
+    box.classList.add('hidden');
+    box.innerHTML = '';
+    return;
+  }
+  box.innerHTML = `
+    <span class="text-[10px] text-win-textTertiary">匹配预设:</span>
+    ${matched.map(p => `
+      <button type="button" onclick="applyPreset('${escapeJs(p.name)}')" class="px-1.5 py-0.5 rounded bg-indigo-500/20 hover:bg-indigo-500/35 text-indigo-300 text-[10px] font-mono border border-indigo-500/30 transition flex items-center space-x-1">
+        <i data-lucide="sparkles" class="w-2.5 h-2.5"></i>
+        <span>${escapeHtml(p.name)}</span>
+      </button>
+    `).join('')}
+  `;
+  box.classList.remove('hidden');
+  if (window.lucide) lucide.createIcons();
+}
+
 function handleFormNameChange() {
   const origName = document.getElementById('formOriginalName')?.value || '';
   const newName = (document.getElementById('formName')?.value || '').trim();
   const hintEl = document.getElementById('lblFormNameChangeHint');
-  if (!hintEl) return;
 
   if (!origName) {
-    hintEl.classList.add('hidden');
+    if (hintEl) hintEl.classList.add('hidden');
+    renderFormPresetSuggestions(newName);
     return;
   }
 
+  const box = document.getElementById('boxPresetSuggestions');
+  if (box) { box.classList.add('hidden'); box.innerHTML = ''; }
+
+  if (!hintEl) return;
   if (newName && newName !== origName) {
     const curScope = document.getElementById('formScope')?.value || 'workspace';
     const exists = allServers.some(s => s.name.toLowerCase() === newName.toLowerCase() && s.scope === curScope);
@@ -176,10 +208,12 @@ function getHeaderListContainer() {
   return document.getElementById('headerList') || document.getElementById('headerContainer');
 }
 
-function openAddServerModal() {
+function openAddServerModal(preferWsDir) {
+  if (typeof refreshProjects === 'function') refreshProjects(false);
   document.getElementById('serverForm')?.reset();
   const titleEl = document.getElementById('modalServerTitle');
-  if (titleEl) titleEl.innerText = '添加 MCP 服务';
+  const projTag = preferWsDir ? (preferWsDir.split(/[\\\/]/).filter(Boolean).pop() || 'Workspace') : '';
+  if (titleEl) titleEl.innerText = projTag ? `添加项目专属 MCP (${projTag})` : '添加 MCP 服务';
   const fn = document.getElementById('formName');
   if (fn) { fn.value = ''; fn.readOnly = false; }
   ['formOriginalName', 'formOriginalScope', 'formOriginalWorkspaceDir'].forEach(id => {
@@ -187,14 +221,16 @@ function openAddServerModal() {
     if (el) el.value = '';
   });
   document.getElementById('lblFormNameChangeHint')?.classList.add('hidden');
+  const boxSuggestions = document.getElementById('boxPresetSuggestions');
+  if (boxSuggestions) { boxSuggestions.classList.add('hidden'); boxSuggestions.innerHTML = ''; }
 
   const envCont = getEnvListContainer();
   if (envCont) envCont.innerHTML = '';
   const headerCont = getHeaderListContainer();
   if (headerCont) headerCont.innerHTML = '';
 
-  const preferScope = currentScopeFilter === 'workspace' ? 'workspace' : 'global';
-  setFormScope(preferScope, currentWorkspace);
+  const preferScope = preferWsDir ? 'workspace' : (currentScopeFilter === 'workspace' ? 'workspace' : 'global');
+  setFormScope(preferScope, preferWsDir || currentWorkspace);
 
   toggleTransportFields('stdio');
   openModal('modalServerForm');
@@ -225,6 +261,8 @@ function editServer(nameInput, scope, encodedConfigPath) {
   const origScope = document.getElementById('formOriginalScope');
   if (origScope) origScope.value = server.scope || 'global';
   document.getElementById('lblFormNameChangeHint')?.classList.add('hidden');
+  const boxSuggestions = document.getElementById('boxPresetSuggestions');
+  if (boxSuggestions) { boxSuggestions.classList.add('hidden'); boxSuggestions.innerHTML = ''; }
 
   let serverWs = '';
   if (server.configPath) {

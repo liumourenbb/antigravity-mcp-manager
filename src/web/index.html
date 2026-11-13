@@ -1,8 +1,27 @@
 <!DOCTYPE html>
-<html lang="zh-CN" class="dark">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem('color-scheme');
+        var meta = document.querySelector('meta[name="color-scheme"]');
+        var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var resolved = (stored === 'light' || stored === 'dark') ? stored : (prefersDark ? 'dark' : 'light');
+        if (stored === 'light' || stored === 'dark') {
+          if (meta) meta.setAttribute('content', stored);
+        }
+        document.documentElement.classList.toggle('dark', resolved === 'dark');
+        document.documentElement.dataset.theme = resolved;
+      } catch (e) {
+        document.documentElement.classList.add('dark');
+        document.documentElement.dataset.theme = 'dark';
+      }
+    })();
+  </script>
   <title>Antigravity MCP Manager</title>
   <!-- Local Vendor Scripts (100% Offline, Instant Load) -->
   <script src="vendor/tailwind.js"></script>
@@ -14,18 +33,18 @@
         extend: {
           colors: {
             win: {
-              bg: '#1c1c1c',
-              surface: '#242424',
-              card: '#2b2b2b',
-              cardHover: '#323232',
-              border: 'rgba(255, 255, 255, 0.08)',
-              borderFocus: 'rgba(255, 255, 255, 0.2)',
-              accent: '#60cdff',
-              accentHover: '#7ae0ff',
-              accentBg: 'rgba(96, 205, 255, 0.1)',
-              textPrimary: '#ffffff',
-              textSecondary: '#a0a0a0',
-              textTertiary: '#707070',
+              bg: 'rgb(var(--win-bg-rgb) / <alpha-value>)',
+              surface: 'rgb(var(--win-surface-rgb) / <alpha-value>)',
+              card: 'rgb(var(--win-card-rgb) / <alpha-value>)',
+              cardHover: 'rgb(var(--win-card-hover-rgb) / <alpha-value>)',
+              border: 'var(--win-border)',
+              borderFocus: 'var(--win-border-focus)',
+              accent: 'rgb(var(--win-accent-rgb) / <alpha-value>)',
+              accentHover: 'rgb(var(--win-accent-hover-rgb) / <alpha-value>)',
+              accentBg: 'rgb(var(--win-accent-rgb) / 0.12)',
+              textPrimary: 'rgb(var(--win-text-primary-rgb) / <alpha-value>)',
+              textSecondary: 'rgb(var(--win-text-secondary-rgb) / <alpha-value>)',
+              textTertiary: 'rgb(var(--win-text-tertiary-rgb) / <alpha-value>)',
             }
           },
           fontFamily: {
@@ -36,136 +55,9 @@
       }
     }
   </script>
-  <style>
-    /* Windows 11 Custom Titlebar and Drag Region */
-    .titlebar-drag {
-      -webkit-app-region: drag;
-      user-select: none;
-    }
-    .titlebar-no-drag {
-      -webkit-app-region: no-drag;
-    }
-
-    /* Windows 11 Fluent & Figma Custom Scrollbar */
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.16); border-radius: 9999px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.32); }
-
-    /* Figma & Windows 11 Fluent 2 Acrylic Card */
-    .fluent-card {
-      position: relative;
-      background: rgba(36, 36, 42, 0.72);
-      backdrop-filter: blur(20px) saturate(160%);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
-      box-shadow: 0 4px 18px -2px rgba(0, 0, 0, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
-      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .fluent-card:hover {
-      background: rgba(44, 44, 52, 0.88);
-      border-color: rgba(255, 255, 255, 0.18);
-      transform: translateY(-2px);
-      box-shadow: 0 10px 28px -4px rgba(0, 0, 0, 0.48), inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
-    }
-
-    /* Stat Cards with Elegant Top Glowing Line */
-    .stat-card {
-      position: relative;
-      overflow: hidden;
-    }
-    .stat-card::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 2.5px;
-      border-radius: 12px 12px 0 0;
-      opacity: 0.85;
-      transition: opacity 0.2s;
-    }
-    .stat-card:hover::before {
-      opacity: 1;
-      height: 3px;
-    }
-    .stat-card-total::before { background: linear-gradient(90deg, #3b82f6, #06b6d4); }
-    .stat-card-enabled::before { background: linear-gradient(90deg, #10b981, #14b8a6); }
-    .stat-card-disabled::before { background: linear-gradient(90deg, #f43f5e, #fb7185); }
-    .stat-card-workspace::before { background: linear-gradient(90deg, #8b5cf6, #c084fc); }
-
-    /* Fluent Switch */
-    .fluent-switch {
-      position: relative;
-      display: inline-block;
-      width: 38px;
-      height: 20px;
-    }
-    .fluent-switch input { opacity: 0; width: 0; height: 0; }
-    .fluent-slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background-color: rgba(255, 255, 255, 0.12);
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      border-radius: 20px;
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .fluent-slider:before {
-      position: absolute;
-      content: "";
-      height: 12px;
-      width: 12px;
-      left: 3px;
-      bottom: 3px;
-      background-color: #e2e8f0;
-      border-radius: 50%;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    input:checked + .fluent-slider {
-      background-color: #0078d4;
-      border-color: #2b88d8;
-      box-shadow: 0 0 12px rgba(0, 120, 212, 0.35);
-    }
-    input:checked + .fluent-slider:before {
-      transform: translateX(18px);
-      background-color: #ffffff;
-    }
-
-    /* Windows 11 Nav Item Active Indicator */
-    .nav-item {
-      position: relative;
-      transition: all 0.15s ease-out;
-    }
-    .nav-item.active {
-      background: rgba(255, 255, 255, 0.08);
-      color: #ffffff;
-      box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
-    }
-    .nav-item.active::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 22%;
-      bottom: 22%;
-      width: 3.5px;
-      border-radius: 4px;
-      background: #60cdff;
-      box-shadow: 0 0 8px rgba(96, 205, 255, 0.6);
-    }
-
-    /* Subtle Animated Glow Backdrops */
-    .bg-acrylic-glow {
-      background-color: #141417;
-      background-image: 
-        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.10) 0px, transparent 45%),
-        radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.08) 0px, transparent 40%),
-        radial-gradient(at 50% 100%, rgba(14, 165, 233, 0.07) 0px, transparent 50%);
-    }
-  </style>
+  <link rel="stylesheet" href="css/theme.css">
 </head>
-<body class="bg-acrylic-glow text-win-textPrimary min-h-screen flex flex-col font-sans select-none antialiased">
+<body class="bg-acrylic-glow text-win-textPrimary h-screen flex flex-col font-sans select-none antialiased overflow-hidden">
 
   <!-- WINDOWS 11 TITLEBAR -->
   <div class="h-10 titlebar-drag bg-[#1c1c20]/90 backdrop-blur-md border-b border-win-border/60 flex items-center justify-between px-3 text-xs shrink-0 z-50">
@@ -176,20 +68,27 @@
       <span class="font-semibold text-slate-200 tracking-wide text-xs">Antigravity MCP Manager</span>
       <span class="px-1.5 py-0.5 rounded text-[10px] bg-win-accentBg text-win-accent font-mono border border-win-accent/20">Win11 Desktop</span>
     </div>
-    <!-- Reserved space for native Windows 11 minimize/maximize/close buttons overlay -->
-    <div class="w-36 h-full titlebar-no-drag"></div>
+    <div class="flex items-center space-x-2 titlebar-no-drag">
+      <button id="theme-toggle-btn" type="button" onclick="window.ThemeManager && ThemeManager.toggleTheme()" aria-pressed="false" aria-label="切换暗夜/白天模式" title="切换暗夜/白天模式" class="theme-toggle-btn">
+        <span id="theme-icon-sun" class="hidden flex items-center" aria-hidden="true"><i data-lucide="sun" class="w-3.5 h-3.5 text-amber-500"></i></span>
+        <span id="theme-icon-moon" class="flex items-center" aria-hidden="true"><i data-lucide="moon" class="w-3.5 h-3.5 text-win-accent"></i></span>
+        <span id="theme-toggle-label">暗夜</span>
+      </button>
+      <!-- Reserved space for native Windows 11 minimize/maximize/close buttons overlay -->
+      <div class="w-36 h-full"></div>
+    </div>
   </div>
 
   <!-- APP CONTAINER -->
-  <div class="flex-1 flex overflow-hidden">
+  <div class="flex-1 flex overflow-hidden min-h-0">
 
-    <!-- LEFT FLUENT NAVIGATION SIDEBAR -->
-    <aside class="w-64 bg-[#1a1a1f]/85 backdrop-blur-2xl border-r border-white/5 flex flex-col justify-between p-3.5 shrink-0 shadow-lg shadow-black/20">
-      <div class="space-y-4">
+    <!-- LEFT FLUENT NAVIGATION SIDEBAR (FIXED SHELL) -->
+    <aside class="w-64 h-full bg-[#1a1a1f]/90 backdrop-blur-2xl border-r border-white/5 flex flex-col justify-between p-3.5 shrink-0 shadow-lg shadow-black/20 select-none overflow-hidden sticky top-0">
+      <div class="flex-1 overflow-y-auto space-y-4 pr-1 min-h-0">
         <!-- SEARCH BOX -->
         <div class="relative">
           <i data-lucide="search" class="w-4 h-4 text-win-textSecondary absolute left-3 top-2.5"></i>
-          <input type="text" id="searchInput" oninput="renderServers()" placeholder="搜索 MCP 服务..." class="w-full bg-[#141418] border border-white/10 rounded-lg pl-9 pr-3 py-1.5 text-xs text-win-textPrimary placeholder-win-textTertiary focus:outline-none focus:border-win-accent transition">
+          <input type="text" id="searchInput" oninput="handleServerSearch(this.value)" placeholder="搜索 MCP 名字..." class="w-full bg-[#141418] border border-white/10 rounded-lg pl-9 pr-3 py-1.5 text-xs text-win-textPrimary placeholder-win-textTertiary focus:outline-none focus:border-win-accent transition">
         </div>
 
         <!-- ANTIGRAVITY WORKSPACE CARD -->
@@ -273,7 +172,7 @@
       </div>
 
       <!-- SIDEBAR FOOTER -->
-      <div class="pt-3 border-t border-win-border/60 text-[11px] text-win-textSecondary flex items-center justify-between">
+      <div class="pt-3 border-t border-win-border/60 text-[11px] text-win-textSecondary flex items-center justify-between shrink-0">
         <div class="flex items-center space-x-2">
           <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block shadow-sm shadow-emerald-400/50"></span>
           <span>原生 IPC 驱动</span>
@@ -285,137 +184,174 @@
     </aside>
 
     <!-- RIGHT CONTENT AREA -->
-    <main class="flex-1 bg-transparent overflow-y-auto flex flex-col p-6 space-y-5">
+    <main class="flex-1 bg-transparent overflow-hidden flex flex-col p-6 min-h-0 min-w-0">
 
-      <!-- VIEW 1: SERVERS VIEW -->
-      <section id="view-servers" class="space-y-5">
-        <!-- COMMAND BAR -->
-        <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-          <div>
-            <h2 class="text-xl font-bold tracking-tight text-white">Model Context Protocol 服务</h2>
-            <p class="text-xs text-win-textSecondary mt-0.5">集中管理 Antigravity 全局与工作区 MCP 工具连接</p>
-          </div>
+      <!-- VIEW 1: SERVERS VIEW (两段式：固定控制面板 + 独立滚动服务区) -->
+      <section id="view-servers" class="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
+        <!-- COMMAND BAR & STATS & CONTEXT BAR (SHRINK-0 绝对固定头部) -->
+        <div class="shrink-0 space-y-3.5 pb-3.5 border-b border-white/5">
+          <!-- COMMAND BAR -->
+          <div class="flex flex-col xl:flex-row gap-3 items-start xl:items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <div>
+                <h2 class="text-xl font-bold tracking-tight text-white">Model Context Protocol 服务</h2>
+                <div class="flex items-center space-x-2 mt-0.5">
+                  <p class="text-xs text-win-textSecondary">集中管理 Antigravity 全局与工作区 MCP 工具连接</p>
+                  <span id="searchResultBadge" class="hidden text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-mono font-medium border border-purple-500/30"></span>
+                </div>
+              </div>
+            </div>
 
-          <div class="flex items-center space-x-2.5">
-            <!-- SCOPE SELECTOR PILLS -->
-            <div class="flex items-center bg-win-surface p-1 rounded-lg border border-win-border text-xs">
-              <button onclick="setScopeFilter('workspace')" id="pillWorkspace" class="scope-pill px-2.5 py-1 rounded-md font-semibold text-purple-200 bg-purple-600/30 border border-purple-500/30 shadow-sm transition" data-scope="workspace">项目专属 MCP</button>
-              <button onclick="setScopeFilter('global')" id="pillGlobal" class="scope-pill px-2.5 py-1 rounded-md font-medium text-win-textSecondary hover:text-white transition" data-scope="global">全局</button>
-              <button onclick="setScopeFilter('all')" id="pillAll" class="scope-pill px-2.5 py-1 rounded-md font-medium text-win-textSecondary hover:text-white transition" data-scope="all">全部</button>
-              <button onclick="setScopeFilter('other')" id="pillOther" class="scope-pill px-2.5 py-1 rounded-md font-medium text-win-textSecondary hover:text-white transition flex items-center space-x-1" data-scope="other">
-                <span>停用池</span>
-                <span id="badgeDisabledCount" class="hidden px-1.5 py-0.2 rounded-full text-[10px] bg-rose-500/20 text-rose-300 font-mono font-bold">0</span>
+            <div class="flex items-center flex-wrap gap-2.5">
+              <!-- MCP NAME SEARCH BOX (主界面名字查询搜索) -->
+              <div class="relative flex items-center w-52 sm:w-60 lg:w-64">
+                <i data-lucide="search" class="w-3.5 h-3.5 text-win-textSecondary absolute left-3 pointer-events-none"></i>
+                <input type="text" id="serverSearchInput" oninput="handleServerSearch(this.value)" placeholder="按 MCP 名字搜索 (Ctrl+F)..." class="w-full bg-[#141418] border border-white/10 hover:border-white/20 focus:border-win-accent rounded-lg pl-9 pr-7 py-1.5 text-xs text-white placeholder-win-textTertiary focus:outline-none transition shadow-inner">
+                <button id="btnClearServerSearch" onclick="clearServerSearch()" title="清空搜索" class="hidden absolute right-2 text-win-textTertiary hover:text-white p-0.5 rounded transition">
+                  <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+
+              <!-- SCOPE SELECTOR PILLS -->
+              <div class="flex items-center bg-win-surface p-1 rounded-lg border border-win-border text-xs">
+                <button onclick="setScopeFilter('workspace')" id="pillWorkspace" class="scope-pill px-2.5 py-1 rounded-md font-semibold text-purple-200 bg-purple-600/30 border border-purple-500/30 shadow-sm transition" data-scope="workspace">项目专属 MCP</button>
+                <button onclick="setScopeFilter('global')" id="pillGlobal" class="scope-pill px-2.5 py-1 rounded-md font-medium text-win-textSecondary hover:text-white transition" data-scope="global">全局</button>
+                <button onclick="setScopeFilter('all')" id="pillAll" class="scope-pill px-2.5 py-1 rounded-md font-medium text-win-textSecondary hover:text-white transition" data-scope="all">全部</button>
+                <button onclick="setScopeFilter('other')" id="pillOther" class="scope-pill px-2.5 py-1 rounded-md font-medium text-win-textSecondary hover:text-white transition flex items-center space-x-1" data-scope="other">
+                  <span>停用池</span>
+                  <span id="badgeDisabledCount" class="hidden px-1.5 py-0.2 rounded-full text-[10px] bg-rose-500/20 text-rose-300 font-mono font-bold">0</span>
+                </button>
+              </div>
+
+              <!-- VIEW MODE SWITCHER (分层 vs 平铺) -->
+              <div class="flex items-center bg-win-surface p-1 rounded-lg border border-win-border text-xs">
+                <button onclick="setViewMode('layered')" id="btnViewLayered" title="分层视图 (按 Antigravity 工作目录分层显示)" class="px-2.5 py-1 rounded-md font-semibold text-white bg-white/10 shadow-sm transition flex items-center space-x-1.5 border border-white/10">
+                  <i data-lucide="layers" class="w-3.5 h-3.5 text-win-accent"></i>
+                  <span>分层视图</span>
+                </button>
+                <button onclick="setViewMode('grid')" id="btnViewGrid" title="平铺视图 (网格卡片平铺)" class="px-2.5 py-1 rounded-md font-medium text-win-textSecondary hover:text-white transition flex items-center space-x-1.5">
+                  <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
+                  <span>平铺视图</span>
+                </button>
+              </div>
+
+              <!-- PASTE BUTTON -->
+              <button onclick="openPasteModal()" title="从剪贴板粘贴导入 MCP 配置 (快捷键 Ctrl+V)" class="px-3 py-1.5 rounded-lg bg-indigo-600/80 hover:bg-indigo-600 text-white text-xs font-semibold flex items-center space-x-1.5 shadow-sm transition border border-indigo-500/30">
+                <i data-lucide="clipboard-paste" class="w-3.5 h-3.5"></i>
+                <span>粘贴 MCP</span>
+              </button>
+
+              <!-- ADD BUTTON -->
+              <button onclick="openAddServerModal()" class="px-3 py-1.5 rounded-lg bg-[#0078d4] hover:bg-[#106ebe] text-white text-xs font-semibold flex items-center space-x-1.5 shadow-sm transition">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                <span>添加服务</span>
               </button>
             </div>
+          </div>
 
-            <!-- PASTE BUTTON -->
-            <button onclick="openPasteModal()" title="从剪贴板粘贴导入 MCP 配置 (快捷键 Ctrl+V)" class="px-3 py-1.5 rounded-lg bg-indigo-600/80 hover:bg-indigo-600 text-white text-xs font-semibold flex items-center space-x-1.5 shadow-sm transition border border-indigo-500/30">
-              <i data-lucide="clipboard-paste" class="w-3.5 h-3.5"></i>
-              <span>粘贴 MCP</span>
-            </button>
+          <!-- STATS OVERVIEW ROW -->
+          <div class="grid grid-cols-4 gap-3.5">
+            <div onclick="setScopeFilter('all')" title="点击查看全部 MCP 服务" class="fluent-card stat-card stat-card-total p-3.5 flex items-center justify-between cursor-pointer hover:border-blue-500/50 hover:bg-white/5 transition">
+              <div>
+                <p class="text-[11px] text-win-textSecondary font-medium">服务总数</p>
+                <p id="statTotal" class="text-2xl font-bold text-white mt-0.5 tracking-tight">-</p>
+              </div>
+              <div class="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                <i data-lucide="cpu" class="w-4.5 h-4.5"></i>
+              </div>
+            </div>
 
-            <!-- ADD BUTTON -->
-            <button onclick="openAddServerModal()" class="px-3 py-1.5 rounded-lg bg-[#0078d4] hover:bg-[#106ebe] text-white text-xs font-semibold flex items-center space-x-1.5 shadow-sm transition">
-              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-              <span>添加服务</span>
-            </button>
+            <div onclick="setScopeFilter('all')" title="点击查看全部就绪服务" class="fluent-card stat-card stat-card-enabled p-3.5 flex items-center justify-between cursor-pointer hover:border-emerald-500/50 hover:bg-emerald-500/5 transition">
+              <div>
+                <p class="text-[11px] text-emerald-400/90 font-medium">运行中</p>
+                <p id="statEnabled" class="text-2xl font-bold text-emerald-400 mt-0.5 tracking-tight">-</p>
+              </div>
+              <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <i data-lucide="check-circle-2" class="w-4.5 h-4.5"></i>
+              </div>
+            </div>
+
+            <div onclick="setScopeFilter('other')" title="点击查看所有已停用服务 (停用池)" class="fluent-card stat-card stat-card-disabled p-3.5 flex items-center justify-between cursor-pointer hover:border-rose-500/60 hover:bg-rose-500/10 transition border border-rose-500/20">
+              <div>
+                <p class="text-[11px] text-rose-300 font-medium flex items-center space-x-1">
+                  <span>已停用 (停用池)</span>
+                </p>
+                <p id="statDisabled" class="text-2xl font-bold text-rose-300 mt-0.5 tracking-tight">-</p>
+              </div>
+              <div class="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
+                <i data-lucide="power-off" class="w-4.5 h-4.5"></i>
+              </div>
+            </div>
+
+            <div onclick="setScopeFilter('workspace')" title="点击仅看当前工作区专属服务" class="fluent-card stat-card stat-card-workspace p-3.5 flex items-center justify-between cursor-pointer hover:border-purple-500/60 hover:bg-purple-500/10 transition">
+              <div>
+                <p class="text-[11px] text-purple-400/90 font-medium">工作区专有</p>
+                <p id="statWorkspace" class="text-2xl font-bold text-purple-400 mt-0.5 tracking-tight">-</p>
+              </div>
+              <div class="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                <i data-lucide="folder-git-2" class="w-4.5 h-4.5"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- ACTIVE WORKSPACE CONTEXT BAR -->
+          <div id="workspaceContextBar" class="p-3 bg-gradient-to-r from-purple-950/40 via-win-surface to-win-surface border border-purple-500/20 rounded-xl flex items-center justify-between text-xs">
+            <div class="flex items-center space-x-2.5">
+              <span class="w-2 h-2 rounded-full bg-purple-400"></span>
+              <span class="text-win-textSecondary">当前工程工作区:</span>
+              <span id="barWorkspaceName" class="font-bold text-white">检测中...</span>
+              <span id="barWorkspacePath" class="text-win-textTertiary font-mono text-[11px] truncate max-w-[280px]">检测中...</span>
+              <span id="barMcpStatus" class="px-1.5 py-0.5 rounded text-[10px] bg-purple-500/20 text-purple-300 font-mono">-</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button onclick="setScopeFilter('workspace')" id="btnFilterProjectOnly" title="仅查看当前项目下的专属 MCP" class="px-2.5 py-1 rounded bg-purple-600 text-white text-xs font-semibold flex items-center space-x-1 shadow-sm transition">
+                <i data-lucide="filter" class="w-3 h-3 text-purple-200"></i>
+                <span>仅看此项目 MCP</span>
+              </button>
+              <button onclick="openProjectConfigFile()" title="在外部编辑器中直接打开此项目的 .agents/mcp_config.json" class="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-purple-300 hover:text-white text-xs font-medium flex items-center space-x-1.5 transition">
+                <i data-lucide="file-code" class="w-3.5 h-3.5 text-purple-400"></i>
+                <span>打开配置文件</span>
+              </button>
+              <button onclick="openProjectsModal()" class="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-win-accent text-xs font-medium flex items-center space-x-1 transition">
+                <i data-lucide="arrow-left-right" class="w-3 h-3"></i>
+                <span>切换项目</span>
+              </button>
+              <button onclick="initCurrentWorkspaceMcp()" id="btnBarInitMcp" class="hidden px-2.5 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium flex items-center space-x-1 transition">
+                <i data-lucide="sparkles" class="w-3 h-3"></i>
+                <span>初始化配置 (.agents)</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        <!-- STATS OVERVIEW ROW -->
-        <div class="grid grid-cols-4 gap-3.5">
-          <div onclick="setScopeFilter('all')" title="点击查看全部 MCP 服务" class="fluent-card stat-card stat-card-total p-3.5 flex items-center justify-between cursor-pointer hover:border-blue-500/50 hover:bg-white/5 transition">
-            <div>
-              <p class="text-[11px] text-win-textSecondary font-medium">服务总数</p>
-              <p id="statTotal" class="text-2xl font-bold text-white mt-0.5 tracking-tight">-</p>
-            </div>
-            <div class="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-              <i data-lucide="cpu" class="w-4.5 h-4.5"></i>
-            </div>
+        <!-- SERVERS GRID (FLEX-1 独立滚动区) -->
+        <div class="flex-1 overflow-y-auto min-h-0 pt-3.5 pr-1 pb-6">
+          <div id="serversContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            <!-- Dynamically populated -->
           </div>
 
-          <div onclick="setScopeFilter('all')" title="点击查看全部就绪服务" class="fluent-card stat-card stat-card-enabled p-3.5 flex items-center justify-between cursor-pointer hover:border-emerald-500/50 hover:bg-emerald-500/5 transition">
-            <div>
-              <p class="text-[11px] text-emerald-400/90 font-medium">运行中</p>
-              <p id="statEnabled" class="text-2xl font-bold text-emerald-400 mt-0.5 tracking-tight">-</p>
+          <!-- EMPTY STATE -->
+          <div id="emptyState" class="hidden fluent-card text-center py-16">
+            <div class="w-12 h-12 rounded-full bg-white/5 text-win-textSecondary mx-auto flex items-center justify-center mb-3">
+              <i data-lucide="inbox" class="w-6 h-6"></i>
             </div>
-            <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-              <i data-lucide="check-circle-2" class="w-4.5 h-4.5"></i>
-            </div>
+            <h3 class="text-sm font-semibold text-slate-200">没有匹配的 MCP 服务</h3>
+            <p class="text-xs text-win-textSecondary mt-1">请尝试更换筛选条件，或点击右上角添加新服务。</p>
           </div>
-
-          <div onclick="setScopeFilter('other')" title="点击查看所有已停用服务 (停用池)" class="fluent-card stat-card stat-card-disabled p-3.5 flex items-center justify-between cursor-pointer hover:border-rose-500/60 hover:bg-rose-500/10 transition border border-rose-500/20">
-            <div>
-              <p class="text-[11px] text-rose-300 font-medium flex items-center space-x-1">
-                <span>已停用 (停用池)</span>
-              </p>
-              <p id="statDisabled" class="text-2xl font-bold text-rose-300 mt-0.5 tracking-tight">-</p>
-            </div>
-            <div class="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
-              <i data-lucide="power-off" class="w-4.5 h-4.5"></i>
-            </div>
-          </div>
-
-          <div onclick="setScopeFilter('workspace')" title="点击仅看当前工作区专属服务" class="fluent-card stat-card stat-card-workspace p-3.5 flex items-center justify-between cursor-pointer hover:border-purple-500/60 hover:bg-purple-500/10 transition">
-            <div>
-              <p class="text-[11px] text-purple-400/90 font-medium">工作区专有</p>
-              <p id="statWorkspace" class="text-2xl font-bold text-purple-400 mt-0.5 tracking-tight">-</p>
-            </div>
-            <div class="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
-              <i data-lucide="folder-git-2" class="w-4.5 h-4.5"></i>
-            </div>
-          </div>
-        </div>
-
-        <!-- ACTIVE WORKSPACE CONTEXT BAR -->
-        <div id="workspaceContextBar" class="p-3 bg-gradient-to-r from-purple-950/40 via-win-surface to-win-surface border border-purple-500/20 rounded-xl flex items-center justify-between text-xs">
-          <div class="flex items-center space-x-2.5">
-            <span class="w-2 h-2 rounded-full bg-purple-400"></span>
-            <span class="text-win-textSecondary">当前工程工作区:</span>
-            <span id="barWorkspaceName" class="font-bold text-white">检测中...</span>
-            <span id="barWorkspacePath" class="text-win-textTertiary font-mono text-[11px] truncate max-w-[280px]">检测中...</span>
-            <span id="barMcpStatus" class="px-1.5 py-0.5 rounded text-[10px] bg-purple-500/20 text-purple-300 font-mono">-</span>
-          </div>
-          <div class="flex items-center space-x-2">
-            <button onclick="setScopeFilter('workspace')" id="btnFilterProjectOnly" title="仅查看当前项目下的专属 MCP" class="px-2.5 py-1 rounded bg-purple-600 text-white text-xs font-semibold flex items-center space-x-1 shadow-sm transition">
-              <i data-lucide="filter" class="w-3 h-3 text-purple-200"></i>
-              <span>仅看此项目 MCP</span>
-            </button>
-            <button onclick="openProjectConfigFile()" title="在外部编辑器中直接打开此项目的 .agents/mcp_config.json" class="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-purple-300 hover:text-white text-xs font-medium flex items-center space-x-1.5 transition">
-              <i data-lucide="file-code" class="w-3.5 h-3.5 text-purple-400"></i>
-              <span>打开配置文件</span>
-            </button>
-            <button onclick="openProjectsModal()" class="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-win-accent text-xs font-medium flex items-center space-x-1 transition">
-              <i data-lucide="arrow-left-right" class="w-3 h-3"></i>
-              <span>切换项目</span>
-            </button>
-            <button onclick="initCurrentWorkspaceMcp()" id="btnBarInitMcp" class="hidden px-2.5 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium flex items-center space-x-1 transition">
-              <i data-lucide="sparkles" class="w-3 h-3"></i>
-              <span>初始化配置 (.agents)</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- SERVERS GRID -->
-        <div id="serversContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-          <!-- Dynamically populated -->
-        </div>
-
-        <!-- EMPTY STATE -->
-        <div id="emptyState" class="hidden fluent-card text-center py-16">
-          <div class="w-12 h-12 rounded-full bg-white/5 text-win-textSecondary mx-auto flex items-center justify-center mb-3">
-            <i data-lucide="inbox" class="w-6 h-6"></i>
-          </div>
-          <h3 class="text-sm font-semibold text-slate-200">没有匹配的 MCP 服务</h3>
-          <p class="text-xs text-win-textSecondary mt-1">请尝试更换筛选条件，或点击右上角添加新服务。</p>
         </div>
       </section>
 
       <!-- VIEW 2: PRESETS MARKET VIEW -->
-      <section id="view-presets" class="hidden space-y-5">
-        <div>
-          <h2 class="text-xl font-bold tracking-tight text-white">预设模板市场</h2>
-          <p class="text-xs text-win-textSecondary mt-0.5">官方与常用 MCP 工具模板，一键套用并自动配置参数</p>
+      <section id="view-presets" class="hidden flex-1 overflow-y-auto min-h-0 space-y-5 pr-1 pb-8">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-xl font-bold tracking-tight text-white">预设模板市场</h2>
+            <p class="text-xs text-win-textSecondary mt-0.5">官方与常用 MCP 工具模板，一键套用并自动配置参数</p>
+          </div>
+          <div class="relative w-full sm:w-72">
+            <i data-lucide="search" class="w-3.5 h-3.5 text-win-textSecondary absolute left-3 top-2.5"></i>
+            <input type="text" id="presetSearchInput" oninput="renderPresetsView()" placeholder="搜索预设 MCP 名字或描述..." class="w-full bg-[#141418] border border-white/10 rounded-lg pl-8.5 pr-3 py-1.5 text-xs text-white placeholder-win-textTertiary focus:outline-none focus:border-indigo-500 transition">
+          </div>
         </div>
         <div id="presetsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
           <!-- Dynamically populated -->
@@ -423,7 +359,7 @@
       </section>
 
       <!-- VIEW 3: JETBRAINS DIAGNOSTICS VIEW -->
-      <section id="view-jetbrains" class="hidden space-y-5">
+      <section id="view-jetbrains" class="hidden flex-1 overflow-y-auto min-h-0 space-y-5 pr-1 pb-8">
         <div class="flex items-center justify-between">
           <div>
             <h2 class="text-xl font-bold tracking-tight text-white">JetBrains IDE 伴随 Bridge 诊断</h2>
@@ -440,7 +376,7 @@
       </section>
 
       <!-- VIEW 4: BACKUPS & SNAPSHOTS VIEW -->
-      <section id="view-backups" class="hidden space-y-5">
+      <section id="view-backups" class="hidden flex-1 overflow-y-auto min-h-0 space-y-5 pr-1 pb-8">
         <div>
           <h2 class="text-xl font-bold tracking-tight text-white">配置快照与历史版本</h2>
           <p class="text-xs text-win-textSecondary mt-0.5">修改前自动生成的本地配置安全快照，随时一键还原</p>
@@ -451,7 +387,7 @@
       </section>
 
       <!-- VIEW 5: RULES MANAGEMENT VIEW -->
-      <section id="view-rules" class="hidden space-y-5">
+      <section id="view-rules" class="hidden flex-1 overflow-y-auto min-h-0 space-y-5 pr-1 pb-8">
         <!-- COMMAND HEADER -->
         <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
           <div>
@@ -596,122 +532,125 @@
         </div>
       </section>
 
-      <!-- VIEW 6: PROJECT RULES MANAGEMENT VIEW -->
-      <section id="view-project-rules" class="hidden space-y-5">
-        <!-- COMMAND HEADER -->
-        <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-          <div>
-            <div class="flex items-center space-x-2">
-              <h2 class="text-xl font-bold tracking-tight text-white">Antigravity 项目规则管理 (Project Rules)</h2>
-              <span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                多工程规则治理中枢
+      <!-- VIEW 6: PROJECT RULES MANAGEMENT VIEW (两段式：顶部固定控制面板 + 独立滚动卡片区) -->
+      <section id="view-project-rules" class="hidden flex-1 flex flex-col h-full min-h-0 overflow-hidden">
+        <!-- FIXED TOP CONTROL PANEL (SHRINK-0 绝对固定控制面板，绝不随卡片滚动) -->
+        <div class="shrink-0 space-y-3 pb-3.5 border-b border-win-border/60">
+          <!-- COMMAND HEADER -->
+          <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+            <div>
+              <div class="flex items-center space-x-2">
+                <h2 class="text-xl font-bold tracking-tight text-white">Antigravity 项目规则管理 (Project Rules)</h2>
+                <span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                  多工程规则治理中枢
+                </span>
+              </div>
+              <p class="text-xs text-win-textSecondary mt-0.5">跨工作区治理项目专属规范，支持项目 AGENTS.md 快速初始化、大纲定位与全局规范一键继承</p>
+            </div>
+
+            <div class="flex items-center space-x-2.5">
+              <button id="project-rules-refresh-btn" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white text-xs font-semibold flex items-center space-x-1.5 border border-win-border transition">
+                <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+                <span>刷新</span>
+              </button>
+              <button id="project-rules-batch-sync-btn" class="px-3 py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 hover:text-white text-xs font-semibold flex items-center space-x-1.5 border border-emerald-500/30 shadow-sm transition" title="将全局规则批量同步写入所有未配置的项目">
+                <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+                <span>一键同步全局到所有项目</span>
+              </button>
+              <button id="project-rules-copy-global-btn" class="px-3 py-1.5 rounded-lg bg-blue-600/30 hover:bg-blue-600/50 text-blue-200 hover:text-white text-xs font-semibold flex items-center space-x-1.5 border border-blue-500/30 shadow-sm transition">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                <span>继承全局到当前</span>
+              </button>
+              <button id="project-rules-open-file-btn" title="在系统外部编辑器中打开当前工程规则" class="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white text-xs font-medium flex items-center space-x-1 border border-win-border transition">
+                <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                <span>外部打开</span>
+              </button>
+              <button id="project-rules-save-btn" class="px-3.5 py-1.5 rounded-lg bg-[#252528] text-neutral-300 hover:bg-[#303034] text-xs font-semibold flex items-center space-x-1.5 shadow-sm transition">
+                <i data-lucide="check" class="w-3.5 h-3.5 text-purple-400"></i>
+                <span>已是最新</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- LIVE ANTIGRAVITY DETECTOR BANNER -->
+          <div class="p-3 rounded-xl border border-purple-500/20 bg-purple-500/5 flex items-center justify-between transition-all">
+            <div class="flex items-center space-x-2.5">
+              <span class="relative flex h-2.5 w-2.5">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-purple-500"></span>
               </span>
+              <div class="text-xs">
+                <span class="font-bold text-white">Antigravity 实时运行态：</span>
+                <span id="project-rules-live-summary" class="text-neutral-300 font-mono">正在连接 Antigravity 实时获取生效规则...</span>
+              </div>
             </div>
-            <p class="text-xs text-win-textSecondary mt-0.5">跨工作区治理项目专属规范，支持项目 AGENTS.md 快速初始化、大纲定位与全局规范一键继承</p>
-          </div>
-
-          <div class="flex items-center space-x-2.5">
-            <button id="project-rules-refresh-btn" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white text-xs font-semibold flex items-center space-x-1.5 border border-win-border transition">
-              <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
-              <span>刷新</span>
-            </button>
-            <button id="project-rules-batch-sync-btn" class="px-3 py-1.5 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 hover:text-white text-xs font-semibold flex items-center space-x-1.5 border border-emerald-500/30 shadow-sm transition" title="将全局规则批量同步写入所有未配置的项目">
-              <i data-lucide="layers" class="w-3.5 h-3.5"></i>
-              <span>一键同步全局到所有项目</span>
-            </button>
-            <button id="project-rules-copy-global-btn" class="px-3 py-1.5 rounded-lg bg-blue-600/30 hover:bg-blue-600/50 text-blue-200 hover:text-white text-xs font-semibold flex items-center space-x-1.5 border border-blue-500/30 shadow-sm transition">
-              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-              <span>继承全局到当前</span>
-            </button>
-            <button id="project-rules-open-file-btn" title="在系统外部编辑器中打开当前工程规则" class="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white text-xs font-medium flex items-center space-x-1 border border-win-border transition">
-              <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-              <span>外部打开</span>
-            </button>
-            <button id="project-rules-save-btn" class="px-3.5 py-1.5 rounded-lg bg-[#252528] text-neutral-300 hover:bg-[#303034] text-xs font-semibold flex items-center space-x-1.5 shadow-sm transition">
-              <i data-lucide="check" class="w-3.5 h-3.5 text-purple-400"></i>
-              <span>已是最新</span>
+            <button id="project-rules-live-refresh-btn" class="px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 text-purple-300 hover:text-white text-xs font-medium flex items-center space-x-1 border border-purple-500/30 transition" title="从 Antigravity 运行态实时重新获取最新规则">
+              <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+              <span>实时从 Antigravity 获取</span>
             </button>
           </div>
-        </div>
 
-        <!-- LIVE ANTIGRAVITY DETECTOR BANNER -->
-        <div class="p-3 rounded-xl border border-purple-500/20 bg-purple-500/5 flex items-center justify-between transition-all">
-          <div class="flex items-center space-x-2.5">
-            <span class="relative flex h-2.5 w-2.5">
-              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-              <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-purple-500"></span>
-            </span>
-            <div class="text-xs">
-              <span class="font-bold text-white">Antigravity 实时运行态：</span>
-              <span id="project-rules-live-summary" class="text-neutral-300 font-mono">正在连接 Antigravity 实时获取生效规则...</span>
+          <!-- STATS CARDS -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+            <div class="fluent-card p-3.5 flex items-center justify-between">
+              <div>
+                <p class="text-[11px] text-win-textSecondary font-medium">识别项目总数</p>
+                <p id="statProjRulesTotal" class="text-2xl font-bold text-white mt-0.5 tracking-tight">-</p>
+              </div>
+              <div class="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                <i data-lucide="folder-git-2" class="w-4.5 h-4.5"></i>
+              </div>
             </div>
-          </div>
-          <button id="project-rules-live-refresh-btn" class="px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 text-purple-300 hover:text-white text-xs font-medium flex items-center space-x-1 border border-purple-500/30 transition" title="从 Antigravity 运行态实时重新获取最新规则">
-            <i data-lucide="refresh-cw" class="w-3 h-3"></i>
-            <span>实时从 Antigravity 获取</span>
-          </button>
-        </div>
 
-        <!-- STATS CARDS -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3.5">
-          <div class="fluent-card p-3.5 flex items-center justify-between">
-            <div>
-              <p class="text-[11px] text-win-textSecondary font-medium">识别项目总数</p>
-              <p id="statProjRulesTotal" class="text-2xl font-bold text-white mt-0.5 tracking-tight">-</p>
+            <div class="fluent-card p-3.5 flex items-center justify-between">
+              <div>
+                <p class="text-[11px] text-emerald-400/90 font-medium">已配置专属规则</p>
+                <p id="statProjRulesConfigured" class="text-2xl font-bold text-emerald-400 mt-0.5 tracking-tight">-</p>
+              </div>
+              <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <i data-lucide="check-circle-2" class="w-4.5 h-4.5"></i>
+              </div>
             </div>
-            <div class="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
-              <i data-lucide="folder-git-2" class="w-4.5 h-4.5"></i>
-            </div>
-          </div>
 
-          <div class="fluent-card p-3.5 flex items-center justify-between">
-            <div>
-              <p class="text-[11px] text-emerald-400/90 font-medium">已配置专属规则</p>
-              <p id="statProjRulesConfigured" class="text-2xl font-bold text-emerald-400 mt-0.5 tracking-tight">-</p>
+            <div class="fluent-card p-3.5 flex items-center justify-between">
+              <div>
+                <p class="text-[11px] text-amber-400/90 font-medium">继承全局 / 未配置</p>
+                <p id="statProjRulesUnconfigured" class="text-2xl font-bold text-amber-400 mt-0.5 tracking-tight">-</p>
+              </div>
+              <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                <i data-lucide="git-fork" class="w-4.5 h-4.5"></i>
+              </div>
             </div>
-            <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-              <i data-lucide="check-circle-2" class="w-4.5 h-4.5"></i>
-            </div>
-          </div>
 
-          <div class="fluent-card p-3.5 flex items-center justify-between">
-            <div>
-              <p class="text-[11px] text-amber-400/90 font-medium">继承全局 / 未配置</p>
-              <p id="statProjRulesUnconfigured" class="text-2xl font-bold text-amber-400 mt-0.5 tracking-tight">-</p>
-            </div>
-            <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-              <i data-lucide="git-fork" class="w-4.5 h-4.5"></i>
+            <div class="fluent-card p-3.5 flex items-center justify-between">
+              <div>
+                <p class="text-[11px] text-blue-400/90 font-medium">专属规则就绪率</p>
+                <p id="statProjRulesRate" class="text-2xl font-bold text-blue-400 mt-0.5 tracking-tight">-</p>
+              </div>
+              <div class="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                <i data-lucide="percent" class="w-4.5 h-4.5"></i>
+              </div>
             </div>
           </div>
 
-          <div class="fluent-card p-3.5 flex items-center justify-between">
-            <div>
-              <p class="text-[11px] text-blue-400/90 font-medium">专属规则就绪率</p>
-              <p id="statProjRulesRate" class="text-2xl font-bold text-blue-400 mt-0.5 tracking-tight">-</p>
+          <!-- SEARCH AND QUICK SWITCH BAR -->
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-xl bg-[#1c1c1f] border border-win-border">
+            <div class="relative w-full sm:w-80">
+              <i data-lucide="search" class="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+              <input type="text" id="project-rules-search" placeholder="搜索项目名称或路径..." class="w-full bg-[#121214] border border-[#2c2c30] rounded-lg pl-9 pr-3 py-1.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-purple-500 transition">
             </div>
-            <div class="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-              <i data-lucide="percent" class="w-4.5 h-4.5"></i>
+
+            <div class="flex items-center space-x-2 w-full sm:w-auto">
+              <span class="text-xs text-neutral-400 shrink-0">选择工作台编辑项目:</span>
+              <select id="project-rules-workspace-select" class="bg-[#121214] border border-[#2c2c30] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500 transition font-medium">
+                <!-- Dynamically populated options -->
+              </select>
             </div>
           </div>
         </div>
 
-        <!-- SEARCH AND QUICK SWITCH BAR -->
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-xl bg-[#1c1c1f] border border-win-border">
-          <div class="relative w-full sm:w-80">
-            <i data-lucide="search" class="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
-            <input type="text" id="project-rules-search" placeholder="搜索项目名称或路径..." class="w-full bg-[#121214] border border-[#2c2c30] rounded-lg pl-9 pr-3 py-1.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-purple-500 transition">
-          </div>
-
-          <div class="flex items-center space-x-2 w-full sm:w-auto">
-            <span class="text-xs text-neutral-400 shrink-0">选择工作台编辑项目:</span>
-            <select id="project-rules-workspace-select" class="bg-[#121214] border border-[#2c2c30] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500 transition font-medium">
-              <!-- Dynamically populated options -->
-            </select>
-          </div>
-        </div>
-
-        <!-- PROJECT CARDS GRID -->
-        <div>
+        <!-- SCROLLABLE CARDS GRID (FLEX-1 独立滚动区，仅卡片在此滚动) -->
+        <div class="flex-1 overflow-y-auto min-h-0 pt-3.5 pr-1">
           <div class="flex items-center justify-between mb-2.5">
             <span class="text-xs font-bold text-neutral-300 flex items-center space-x-1.5">
               <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-purple-400"></i>
@@ -719,7 +658,7 @@
             </span>
             <span class="text-[11px] text-win-textTertiary">点击卡片或“进入编辑”按钮直接弹出编辑工作台</span>
           </div>
-          <div id="project-rules-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          <div id="project-rules-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 pb-8">
             <!-- Dynamically populated project cards -->
           </div>
         </div>
@@ -915,6 +854,7 @@
               <span id="lblFormNameChangeHint" class="text-[10px] text-purple-400 font-mono hidden"></span>
             </div>
             <input type="text" id="formName" oninput="handleFormNameChange()" required placeholder="如 postgres, github, lark-mcp" class="w-full bg-[#1a1a1a] border border-win-border rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-win-accent">
+            <div id="boxPresetSuggestions" class="hidden mt-1.5 flex flex-wrap items-center gap-1"></div>
           </div>
           <div>
             <div class="flex items-center justify-between mb-1">
@@ -1278,6 +1218,7 @@
 
   <!-- MODULAR JAVASCRIPT LOGIC (RULE 7 ARCHITECTURE) -->
   <script src="js/helpers.js"></script>
+  <script src="js/theme-manager.js"></script>
   <script src="js/api.js"></script>
   <script src="js/workspace-manager.js"></script>
   <script src="js/server-card-renderer.js"></script>

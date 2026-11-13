@@ -15,6 +15,7 @@ function getFunctions(filePath) {
     const fnMatch = line.match(/(?:function\s+([a-zA-Z0-9_$]+)|(?:async\s+)?([a-zA-Z0-9_$]+)\s*\([^)]*\)\s*\{|(?:const|let|var)\s+([a-zA-Z0-9_$]+)\s*=\s*(?:async\s*)?\([^)]*\)\s*=>)/);
     if (fnMatch) {
       const name = fnMatch[1] || fnMatch[2] || fnMatch[3] || 'anonymous';
+      if (['if', 'for', 'while', 'switch', 'catch', 'with'].includes(name)) continue;
       let depth = 0;
       let started = false;
       let endLine = -1;
@@ -61,6 +62,7 @@ const targetFiles = [
   'src/desktop/ipc.js',
   'src/desktop/main.js',
   'src/web/js/helpers.js',
+  'src/web/js/theme-manager.js',
   'src/web/js/api.js',
   'src/web/js/workspace-manager.js',
   'src/web/js/server-card-renderer.js',

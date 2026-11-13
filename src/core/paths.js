@@ -31,6 +31,9 @@ export const PATHS = {
 
   // Global Rules modular directory
   globalRulesDir: path.join(homedir, '.gemini', 'config', 'rules'),
+
+  // Antigravity native projects configuration directory (contains *.json project definitions)
+  antigravityProjectsDir: path.join(homedir, '.gemini', 'config', 'projects'),
 };
 
 /**

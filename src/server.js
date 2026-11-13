@@ -13,7 +13,25 @@ import { handleRulesHttpRoutes } from './core/rules-router.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const webIndexPath = path.join(__dirname, 'web', 'index.html');
+const webRootDir = path.join(__dirname, 'web');
+const webIndexPath = path.join(webRootDir, 'index.html');
+
+/**
+ * Serves static web assets under /vendor/, /js/, or /css/ safely.
+ * @returns {boolean} True when response was handled.
+ */
+function tryServeWebAsset(res, pathname) {
+  const mimeMap = { '.js': 'application/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
+  const allowed = ['/vendor/', '/js/', '/css/'].some(prefix => pathname.startsWith(prefix));
+  if (!allowed) return false;
+  const target = path.resolve(webRootDir, pathname.replace(/^\/+/, ''));
+  if (!target.startsWith(webRootDir + path.sep)) return false;
+  if (!fs.existsSync(target) || !fs.statSync(target).isFile()) return false;
+  const contentType = mimeMap[path.extname(target).toLowerCase()] || 'application/octet-stream';
+  res.writeHead(200, { 'Content-Type': contentType });
+  fs.createReadStream(target).pipe(res);
+  return true;
+}
 
 /**
  * Parses JSON body from request.
@@ -91,13 +109,9 @@ export function startServer({ port = 3210, host = '127.0.0.1', workspaceDir = pr
         return fs.createReadStream(webIndexPath).pipe(res);
       }
 
-      // 1.1 Serve local vendor scripts (tailwind, lucide - 100% offline!)
-      if (pathname.startsWith('/vendor/') && method === 'GET') {
-        const filePath = path.join(__dirname, 'web', pathname);
-        if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-          res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8' });
-          return fs.createReadStream(filePath).pipe(res);
-        }
+      // 1.1 Serve static web assets (/vendor/, /js/, /css/ - 100% offline!)
+      if (method === 'GET' && tryServeWebAsset(res, pathname)) {
+        return;
       }
 
       // 1.2 Rules API Delegation
@@ -130,7 +144,7 @@ export function startServer({ port = 3210, host = '127.0.0.1', workspaceDir = pr
       if (toggleMatch && method === 'POST') {
         const name = decodeURIComponent(toggleMatch[1]);
         const body = await parseJsonBody(req);
-        const updated = toggleServer(name, body.enabled, body.scope || 'global', workspaceDir);
+        const updated = toggleServer(name, body.enabled, body.scope || 'global', workspaceDir, body.configPath);
         return sendJson(200, { ok: true, server: maskSensitiveServer(updated) });
       }
 
@@ -149,7 +163,8 @@ export function startServer({ port = 3210, host = '127.0.0.1', workspaceDir = pr
       if (deleteMatch && method === 'DELETE') {
         const name = decodeURIComponent(deleteMatch[1]);
         const scope = parsedUrl.searchParams.get('scope') || 'global';
-        const deleted = deleteServer(name, scope, workspaceDir);
+        const configPath = parsedUrl.searchParams.get('configPath') || undefined;
+        const deleted = deleteServer(name, scope, workspaceDir, configPath);
         return sendJson(200, { ok: true, deleted });
       }
 

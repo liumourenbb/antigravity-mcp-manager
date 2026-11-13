@@ -185,6 +185,7 @@ function clearPasteInput() {
 }
 
 function openPasteModal(initialJson = '') {
+  if (typeof refreshProjects === 'function') refreshProjects(false);
   openModal('modalPasteMcp');
   const textarea = document.getElementById('pasteJsonInput');
   const targetScope = currentScopeFilter === 'workspace' ? 'workspace' : (currentScopeFilter === 'global' ? 'global' : 'workspace');

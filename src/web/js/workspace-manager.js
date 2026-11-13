@@ -17,19 +17,96 @@ async function initWorkspace() {
   }
 }
 
+let isRefreshingProjects = false;
+let autoSyncTimer = null;
+let lastSyncTimestamp = 0;
+
+function hasProjectsChanged(oldList, newList) {
+  if (!oldList || !newList) return true;
+  if (oldList.length !== newList.length) return true;
+  const oldMap = new Map(oldList.map(p => [(p.path || '').toLowerCase(), p.mcpCount || 0]));
+  return newList.some(p => {
+    const key = (p.path || '').toLowerCase();
+    if (!oldMap.has(key)) return true;
+    return oldMap.get(key) !== (p.mcpCount || 0);
+  });
+}
+
+function notifyProjectConsumers(changed = false) {
+  updateWorkspaceUI();
+  renderProjectsList();
+
+  if (typeof populateProjectOptions === 'function') {
+    const curVal = document.getElementById('formTargetWorkspace')?.value || currentWorkspace;
+    populateProjectOptions(curVal);
+  }
+
+  if (typeof populatePasteProjectOptions === 'function') {
+    const curVal = document.getElementById('pasteTargetWorkspace')?.value || currentWorkspace;
+    populatePasteProjectOptions(curVal);
+  }
+
+  const prm = window.ProjectRulesManager || (typeof ProjectRulesManager !== 'undefined' ? ProjectRulesManager : null);
+  if (changed && prm && typeof prm.load === 'function') {
+    prm.load().catch(() => {});
+  }
+}
+
 async function refreshProjects(showToastMsg = false) {
+  if (isRefreshingProjects) return false;
+  isRefreshingProjects = true;
   try {
     const res = await api.getAntigravityProjects();
-    if (res.ok) {
-      antigravityProjects = res.projects || [];
+    if (res && res.ok) {
+      const newProjects = res.projects || [];
+      const changed = hasProjectsChanged(antigravityProjects, newProjects);
+      const prevCount = antigravityProjects ? antigravityProjects.length : 0;
+      antigravityProjects = newProjects;
       if (res.activeWorkspace) currentWorkspace = res.activeWorkspace;
-      updateWorkspaceUI();
-      renderProjectsList();
-      if (showToastMsg) showToast(`已重新同步 ${antigravityProjects.length} 个 Antigravity 项目`, 'success');
+
+      notifyProjectConsumers(changed);
+
+      if (showToastMsg) {
+        showToast(`已重新同步 ${antigravityProjects.length} 个 Antigravity 项目`, 'success');
+      } else if (changed && prevCount > 0 && newProjects.length > prevCount) {
+        const diff = newProjects.length - prevCount;
+        showToast(`已自动感知并同步 ${diff} 个新增项目`, 'info');
+      }
+      return true;
     }
   } catch (err) {
     if (showToastMsg) showToast('刷新项目失败: ' + err.message, 'error');
+  } finally {
+    isRefreshingProjects = false;
   }
+  return false;
+}
+
+function triggerAutoSync(reason = 'auto') {
+  const now = Date.now();
+  if (now - lastSyncTimestamp < 1500) return;
+  lastSyncTimestamp = now;
+  refreshProjects(false);
+}
+
+function startAutoProjectSync() {
+  if (autoSyncTimer) clearInterval(autoSyncTimer);
+
+  window.addEventListener('focus', () => {
+    triggerAutoSync('window-focus');
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      triggerAutoSync('visibility-change');
+    }
+  });
+
+  autoSyncTimer = setInterval(() => {
+    if (!document.hidden) {
+      triggerAutoSync('interval-heartbeat');
+    }
+  }, 15000);
 }
 
 function openProjectsModal() {
@@ -207,6 +284,25 @@ async function chooseWorkspace() {
   }
 }
 
+function getProjectTotalMcpMeta(matched) {
+  if (!matched) return { totalCount: 0, folderCount: 1, isMulti: false, folderDesc: '' };
+  const isMulti = Boolean(matched.isMultiFolder && Array.isArray(matched.associatedFolders) && matched.associatedFolders.length > 1);
+  const folderCount = isMulti ? matched.associatedFolders.length : 1;
+  if (!isMulti) {
+    return { totalCount: matched.mcpCount || 0, folderCount: 1, isMulti: false, folderDesc: '' };
+  }
+  const folderNorms = matched.associatedFolders.map(f => (f || '').replace(/[\\\/]+/g, '/').toLowerCase());
+  let totalCount = 0;
+  for (const p of (antigravityProjects || [])) {
+    if (p.path && folderNorms.includes(p.path.replace(/[\\\/]+/g, '/').toLowerCase())) {
+      totalCount += (p.mcpCount || 0);
+    }
+  }
+  const folderNames = matched.associatedFolders.map(f => f.split(/[\\\/]/).filter(Boolean).pop());
+  const folderDesc = `包含 ${folderCount} 个工作文件夹: ${folderNames.join(', ')}`;
+  return { totalCount, folderCount, isMulti, folderDesc };
+}
+
 function updateWorkspaceUI() {
   const lblPath = document.getElementById('lblCurrentWorkspace');
   const lblName = document.getElementById('lblWorkspaceName');
@@ -215,19 +311,20 @@ function updateWorkspaceUI() {
 
   const matched = (antigravityProjects || []).find(p => p.path.toLowerCase() === (currentWorkspace || '').toLowerCase());
   const folderName = matched ? matched.name : (currentWorkspace ? currentWorkspace.split('\\').pop() : '未选择');
+  const meta = getProjectTotalMcpMeta(matched);
   
   if (lblName) lblName.innerText = folderName;
   if (lblPath) {
-    lblPath.innerText = currentWorkspace || '未选择工作区';
-    lblPath.title = currentWorkspace || '';
+    lblPath.innerText = meta.isMulti ? `${currentWorkspace} (+${meta.folderCount - 1})` : (currentWorkspace || '未选择工作区');
+    lblPath.title = meta.isMulti ? `${meta.folderDesc}\n${currentWorkspace}` : (currentWorkspace || '');
   }
 
   if (badgeCount) {
-    if (matched && matched.hasMcp) {
-      badgeCount.innerText = `${matched.mcpCount} 个服务`;
+    if (meta.totalCount > 0) {
+      badgeCount.innerText = meta.isMulti ? `${meta.totalCount} 个服务 (${meta.folderCount} 文件夹)` : `${meta.totalCount} 个服务`;
       badgeCount.className = 'text-[9px] px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300 font-mono border border-purple-500/20';
     } else {
-      badgeCount.innerText = '未配置 MCP';
+      badgeCount.innerText = meta.isMulti ? `未配置 (${meta.folderCount} 文件夹)` : '未配置 MCP';
       badgeCount.className = 'text-[9px] px-1.5 py-0.5 rounded-full bg-white/5 text-win-textTertiary font-mono';
     }
   }
@@ -251,12 +348,12 @@ function updateWorkspaceUI() {
 
   if (barName) barName.innerText = folderName;
   if (barPath) {
-    barPath.innerText = currentWorkspace || '未选择工作区';
-    barPath.title = currentWorkspace || '';
+    barPath.innerText = meta.isMulti ? `${currentWorkspace} (+${meta.folderCount - 1} 个工作文件夹)` : (currentWorkspace || '未选择工作区');
+    barPath.title = meta.isMulti ? `${meta.folderDesc}\n${currentWorkspace}` : (currentWorkspace || '');
   }
   if (barMcp) {
-    if (matched && matched.hasMcp) {
-      barMcp.innerText = `${matched.mcpCount} 个服务`;
+    if (meta.totalCount > 0) {
+      barMcp.innerText = meta.isMulti ? `${meta.totalCount} 个服务 (${meta.folderCount} 文件夹)` : `${meta.totalCount} 个服务`;
       barMcp.className = 'px-1.5 py-0.5 rounded text-[10px] bg-purple-500/20 text-purple-300 font-mono';
       if (btnInit) btnInit.classList.add('hidden');
     } else {

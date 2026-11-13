@@ -10,12 +10,12 @@ const api = {
     return res.json();
   },
 
-  async toggleServer(name, scope, enabled) {
-    if (window.mcpApi) return window.mcpApi.toggleServer(name, scope, enabled, currentWorkspace);
+  async toggleServer(name, scope, enabled, configPath) {
+    if (window.mcpApi) return window.mcpApi.toggleServer(name, scope, enabled, currentWorkspace, configPath);
     const res = await fetch(`/api/servers/${encodeURIComponent(name)}/toggle`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scope, enabled, workspaceDir: currentWorkspace })
+      body: JSON.stringify({ scope, enabled, workspaceDir: currentWorkspace, configPath })
     });
     return res.json();
   },
@@ -31,9 +31,11 @@ const api = {
     return res.json();
   },
 
-  async deleteServer(name, scope) {
-    if (window.mcpApi) return window.mcpApi.deleteServer(name, scope, currentWorkspace);
-    const res = await fetch(`/api/servers/${encodeURIComponent(name)}?scope=${scope}&workspaceDir=${encodeURIComponent(currentWorkspace || '')}`, { method: 'DELETE' });
+  async deleteServer(name, scope, configPath) {
+    if (window.mcpApi) return window.mcpApi.deleteServer(name, scope, currentWorkspace, configPath);
+    const query = new URLSearchParams({ scope: scope || 'global', workspaceDir: currentWorkspace || '' });
+    if (configPath) query.set('configPath', configPath);
+    const res = await fetch(`/api/servers/${encodeURIComponent(name)}?${query.toString()}`, { method: 'DELETE' });
     return res.json();
   },
 
