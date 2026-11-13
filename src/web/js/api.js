@@ -245,5 +245,23 @@ const api = {
     }
     const res = await fetch('/api/rules/live');
     return res.json();
+  },
+
+  async refreshServer(name, scope = 'all', configPath = '', workspaceDir = '') {
+    const payload = {
+      name,
+      scope,
+      configPath: configPath || undefined,
+      workspaceDir: workspaceDir || undefined,
+    };
+    if (window.mcpApi && window.mcpApi.refreshServer) {
+      return window.mcpApi.refreshServer(payload);
+    }
+    const res = await fetch(`/api/servers/${encodeURIComponent(name)}/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
   }
 };

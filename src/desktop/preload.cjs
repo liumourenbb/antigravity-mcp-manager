@@ -35,4 +35,5 @@ contextBridge.exposeInMainWorld('mcpApi', {
   batchSyncGlobalRules: (projectPaths, overwriteExisting) => ipcRenderer.invoke('mcp:batchSyncGlobalRules', { projectPaths, overwriteExisting }),
   getAntigravityLiveRules: () => ipcRenderer.invoke('mcp:getAntigravityLiveRules'),
   setTheme: (theme) => ipcRenderer.invoke('mcp:setTheme', theme),
+  refreshServer: (payload) => ipcRenderer.invoke('mcp:refreshServer', payload),
 });

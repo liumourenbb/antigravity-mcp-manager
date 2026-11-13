@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getServers, toggleServer, saveServer, deleteServer, maskSensitiveServer } from './core/config.js';
 import { testServerConnection } from './core/diagnostics.js';
+import { refreshSingleServer } from './core/mcp-refresh.js';
 import { getServerTools } from './core/tools.js';
 import { PRESETS } from './core/presets.js';
 import { scanJetBrainsBridges, cleanStaleJetBrainsBridges } from './core/jetbrains.js';
@@ -30,6 +31,32 @@ function tryServeWebAsset(res, pathname) {
   const contentType = mimeMap[path.extname(target).toLowerCase()] || 'application/octet-stream';
   res.writeHead(200, { 'Content-Type': contentType });
   fs.createReadStream(target).pipe(res);
+  return true;
+}
+
+/**
+ * Handles POST /api/servers/:name/refresh requests via mcp-refresh core.
+ */
+async function tryHandleRefreshHttpRoute(req, parsedUrl, workspaceDir, sendJson) {
+  const refreshMatch = parsedUrl.pathname.match(/^\/api\/servers\/([^/]+)\/refresh$/);
+  if (!refreshMatch || req.method.toUpperCase() !== 'POST') return false;
+  const name = decodeURIComponent(refreshMatch[1]);
+  const body = await parseJsonBody(req);
+  const result = await refreshSingleServer(name, {
+    scope: body.scope || 'all',
+    workspaceDir: body.workspaceDir || workspaceDir,
+    configPath: body.configPath || undefined,
+    timeoutMs: 8000,
+  });
+  if (result.notFound) {
+    sendJson(404, result);
+    return true;
+  }
+  const safeResult = {
+    ...result,
+    server: result.server ? maskSensitiveServer(result.server) : undefined,
+  };
+  sendJson(200, safeResult);
   return true;
 }
 
@@ -117,6 +144,11 @@ export function startServer({ port = 3210, host = '127.0.0.1', workspaceDir = pr
       // 1.2 Rules API Delegation
       if (pathname.startsWith('/api/rules')) {
         return await handleRulesHttpRoutes(req, res, parsedUrl, parseJsonBody, sendJson, sendError);
+      }
+
+      // 1.3 MCP Refresh Delegation
+      if (await tryHandleRefreshHttpRoute(req, parsedUrl, workspaceDir, sendJson)) {
+        return;
       }
 
       // 2. GET /api/servers

@@ -235,6 +235,12 @@
                 </button>
               </div>
 
+              <!-- REFRESH ALL MCP BUTTON -->
+              <button type="button" onclick="refreshAllMcp(true)" id="btnRefreshAllMcp" title="从磁盘重新加载并刷新全部工作区及全局 MCP 状态" aria-label="刷新全部 MCP" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-win-textSecondary hover:text-white text-xs font-semibold flex items-center space-x-1.5 border border-white/10 shadow-sm transition">
+                <i data-lucide="refresh-cw" aria-hidden="true" class="w-3.5 h-3.5 text-emerald-400"></i>
+                <span>刷新</span>
+              </button>
+
               <!-- PASTE BUTTON -->
               <button onclick="openPasteModal()" title="从剪贴板粘贴导入 MCP 配置 (快捷键 Ctrl+V)" class="px-3 py-1.5 rounded-lg bg-indigo-600/80 hover:bg-indigo-600 text-white text-xs font-semibold flex items-center space-x-1.5 shadow-sm transition border border-indigo-500/30">
                 <i data-lucide="clipboard-paste" class="w-3.5 h-3.5"></i>
@@ -1227,6 +1233,7 @@
   <script src="js/diagnostics-presets.js"></script>
   <script src="js/rules-manager.js"></script>
   <script src="js/project-rules-manager.js"></script>
+  <script src="js/refresh-manager.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

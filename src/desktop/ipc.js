@@ -1,6 +1,7 @@
 import { ipcMain, dialog, BrowserWindow, shell, clipboard, nativeTheme } from 'electron';
 import { getServers, toggleServer, saveServer, deleteServer } from '../core/config.js';
 import { testServerConnection } from '../core/diagnostics.js';
+import { refreshSingleServer } from '../core/mcp-refresh.js';
 import { getServerTools } from '../core/tools.js';
 import { PRESETS } from '../core/presets.js';
 import { scanJetBrainsBridges, cleanStaleJetBrainsBridges } from '../core/jetbrains.js';
@@ -401,6 +402,22 @@ function registerProjectRulesIpcHandlers() {
 }
 
 /**
+ * Registers IPC handlers for single-server disk reload & live MCP refresh probing.
+ */
+function registerRefreshIpcHandlers() {
+  ipcMain.handle('mcp:refreshServer', async (event, payload = {}) => {
+    try {
+      const { name, scope = 'all', workspaceDir, configPath, timeoutMs = 8000 } = payload;
+      if (!name) return { ok: false, error: 'Missing server name' };
+      const effectiveWs = workspaceDir || getDefaultWorkspaceDir();
+      return await refreshSingleServer(name, { scope, workspaceDir: effectiveWs, configPath, timeoutMs });
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
+}
+
+/**
  * Main entrance to register all IPC handlers.
  */
 export function registerIpcHandlers() {
@@ -411,4 +428,5 @@ export function registerIpcHandlers() {
   registerSystemIpcHandlers();
   registerRulesBasicIpcHandlers();
   registerProjectRulesIpcHandlers();
+  registerRefreshIpcHandlers();
 }

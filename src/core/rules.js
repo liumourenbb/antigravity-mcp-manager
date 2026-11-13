@@ -451,7 +451,7 @@ export function batchSyncGlobalRules(projectPaths = null, overwriteExisting = fa
 /**
  * Checks whether Antigravity desktop application is currently running.
  */
-function isAntigravityRunning() {
+export function isAntigravityRunning() {
   if (process.platform === 'win32') {
     try {
       const out = execSync('tasklist /FI "IMAGENAME eq Antigravity.exe" /NH', {

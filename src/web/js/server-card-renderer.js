@@ -312,6 +312,21 @@ function renderCardHeaderHtml(s, isHttp, scopeBadge, typeBadge, searchKeyword) {
   `;
 }
 
+function renderCardStatusBadgeHtml(s) {
+  const probe = typeof getLastProbeResult === 'function' ? getLastProbeResult(s) : null;
+  if (s.disabled) {
+    return `<span class="w-2 h-2 rounded-full bg-slate-600 inline-block"></span><span>${probe?.disabled ? '已停用 (已重载)' : '已停用'}</span>`;
+  }
+  if (probe) {
+    if (probe.ok) {
+      const toolsText = probe.toolsCount > 0 ? ` · ${probe.toolsCount} 工具` : '';
+      return `<span class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)] inline-block"></span><span class="text-emerald-400 font-mono font-medium text-[11px]">${probe.latencyMs || 0}ms 正常${toolsText}</span>`;
+    }
+    return `<span class="w-2 h-2 rounded-full bg-rose-500 inline-block"></span><span class="text-rose-400 font-mono text-[11px]">探针失败</span>`;
+  }
+  return `<span class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)] inline-block"></span><span>就绪</span>`;
+}
+
 function renderCardFooterHtml(s) {
   const encName = encodeURIComponent(s.name);
   const encPath = encodeURIComponent(s.configPath || '');
@@ -320,11 +335,13 @@ function renderCardFooterHtml(s) {
   return `
     <div class="pt-3 mt-3 border-t border-white/5 flex items-center justify-between">
       <div id="${pingId}" class="flex items-center space-x-1.5 text-[11px] ${s.disabled ? 'text-win-textTertiary' : 'text-emerald-400 font-medium'}">
-        <span class="w-2 h-2 rounded-full ${s.disabled ? 'bg-slate-600' : 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.7)]'} inline-block"></span>
-        <span>${s.disabled ? '已停用' : '就绪'}</span>
+        ${renderCardStatusBadgeHtml(s)}
       </div>
 
       <div class="flex items-center space-x-1">
+        <button type="button" onclick="refreshSingleMcp('${encName}', '${encScope}', '${encPath}', '${pingId}', this)" title="重载配置并实时探测工具 (热重启探测)" aria-label="刷新 ${escapeHtml(s.name)}" class="p-1.5 rounded-lg hover:bg-white/10 text-win-textSecondary hover:text-emerald-400 transition">
+          <i data-lucide="refresh-cw" aria-hidden="true" class="w-3.5 h-3.5"></i>
+        </button>
         <button onclick="testConnection('${encName}', '${pingId}')" title="测试连接" class="p-1.5 rounded-lg hover:bg-white/10 text-win-textSecondary hover:text-white transition">
           <i data-lucide="activity" class="w-3.5 h-3.5"></i>
         </button>
@@ -640,6 +657,7 @@ function renderWorkspaceGroupHeaderHtml(g, isCollapsed) {
         </div>
       </div>
       <div class="flex items-center space-x-2 shrink-0">
+        ${typeof buildGroupRefreshBtnHtml === 'function' ? buildGroupRefreshBtnHtml(g) : ''}
         ${actionsHtml}
         <button onclick="toggleGroupCollapse('${g.id}')" title="${isCollapsed ? '展开此分组' : '折叠此分组'}" class="p-1 rounded-md hover:bg-white/10 text-win-textSecondary hover:text-white transition">
           <i data-lucide="${isCollapsed ? 'chevron-down' : 'chevron-up'}" class="w-4 h-4"></i>
@@ -806,6 +824,19 @@ async function testConnection(nameInput, pingIdInput) {
   }
 }
 
+function renderToolSchemaCardsHtml(tools) {
+  return tools.map(t => `
+      <div class="fluent-card p-3 space-y-1.5">
+        <div class="flex items-center justify-between">
+          <span class="font-mono font-bold text-win-accent text-xs">${escapeHtml(t.name)}</span>
+          <span class="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-win-textSecondary font-mono">Tool</span>
+        </div>
+        <p class="text-xs text-slate-300">${escapeHtml(t.description || '无详细描述')}</p>
+        ${t.inputSchema ? `<pre class="mt-2 p-2 bg-[#161616] rounded border border-white/5 text-[10px] font-mono text-slate-300 overflow-x-auto">${escapeHtml(JSON.stringify(t.inputSchema, null, 2))}</pre>` : ''}
+      </div>
+    `).join('');
+}
+
 async function inspectTools(nameInput) {
   let name = nameInput;
   try {
@@ -823,22 +854,26 @@ async function inspectTools(nameInput) {
 
   try {
     const res = await api.getTools(name);
-    const tools = res.tools || [];
+    const liveTools = typeof getLiveCachedTools === 'function' ? getLiveCachedTools(name) : [];
+    const tools = (res.tools && res.tools.length > 0) ? res.tools : liveTools;
     if (tools.length === 0) {
-      container.innerHTML = `<div class="p-6 text-center text-win-textSecondary text-xs">该服务尚未缓存工具列表，或未在 Antigravity 启动调用过。</div>`;
+      const encName = encodeURIComponent(name);
+      container.innerHTML = `
+        <div class="p-6 text-center space-y-3">
+          <p class="text-win-textSecondary text-xs">该服务尚未缓存工具列表，或未在 Antigravity 启动调用过。</p>
+          <button type="button" onclick="refreshAndInspectTools('${encName}')" class="px-3.5 py-1.5 rounded-lg bg-[#0078d4] hover:bg-[#106ebe] text-white text-xs font-semibold inline-flex items-center space-x-1.5 transition shadow-sm">
+            <i data-lucide="refresh-cw" aria-hidden="true" class="w-3.5 h-3.5"></i>
+            <span>立即实时刷新并拉取工具</span>
+          </button>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
       return;
     }
-
-    container.innerHTML = tools.map(t => `
-      <div class="fluent-card p-3 space-y-1.5">
-        <div class="flex items-center justify-between">
-          <span class="font-mono font-bold text-win-accent text-xs">${escapeHtml(t.name)}</span>
-          <span class="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-win-textSecondary font-mono">Tool</span>
-        </div>
-        <p class="text-xs text-slate-300">${escapeHtml(t.description || '无详细描述')}</p>
-        ${t.inputSchema ? `<pre class="mt-2 p-2 bg-[#161616] rounded border border-white/5 text-[10px] font-mono text-slate-300 overflow-x-auto">${escapeHtml(JSON.stringify(t.inputSchema, null, 2))}</pre>` : ''}
-      </div>
-    `).join('');
+    if ((!res.tools || res.tools.length === 0) && subtitle) {
+      subtitle.innerText = `已从实时 MCP 探针中提取 ${tools.length} 个最新工具定义（尚未写入本地缓存）`;
+    }
+    container.innerHTML = renderToolSchemaCardsHtml(tools);
   } catch (err) {
     container.innerHTML = `<div class="p-4 text-center text-rose-400 text-xs">读取失败: ${escapeHtml(err.message)}</div>`;
   }

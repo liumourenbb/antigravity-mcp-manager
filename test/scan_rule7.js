@@ -59,6 +59,7 @@ const targetFiles = [
   'src/core/presets.js',
   'src/core/rules.js',
   'src/core/rules-router.js',
+  'src/core/mcp-refresh.js',
   'src/desktop/ipc.js',
   'src/desktop/main.js',
   'src/web/js/helpers.js',
@@ -71,6 +72,7 @@ const targetFiles = [
   'src/web/js/diagnostics-presets.js',
   'src/web/js/rules-manager.js',
   'src/web/js/project-rules-manager.js',
+  'src/web/js/refresh-manager.js',
   'src/web/js/app.js',
   'src/web/index.html'
 ];
