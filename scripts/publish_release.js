@@ -116,6 +116,31 @@ function uploadAssetWithCurl(token, uploadUrlTemplate, filePath, assetName) {
   return { ok: true };
 }
 
+function buildReleasePayload(version) {
+  return {
+    tag_name: `v${version}`,
+    target_commitish: 'main',
+    name: `Antigravity MCP Manager v${version} (Dark/Light Themes, Multi-Workspace Layering & Live MCP Refresh)`,
+    body: `## Antigravity MCP Manager v${version} 🚀\n\n` +
+      `重大版本升级！全面支持原生暗夜/白天双主题、Antigravity 项目多工作区与成员分层分组视图、MCP 名称实时搜索，以及单服务/分组/全局三级实时探针与热重载功能。\n\n` +
+      `### ✨ 核心更新亮点\n` +
+      `- 🌓 **原生 Dark / Light 双主题切换**：支持暗夜与白天主题平滑切换，针对低眩光与护眼进行深度配色重构，全站核心文本及状态标识均达 WCAG AAA（≥ 7:1）高清晰对比度。\n` +
+      `- 🗂️ **多工作区分层视图 (Layered View)**：支持按 Antigravity 实际工作目录与项目专属分层分组展示 MCP，支持多成员文件夹识别与项目专属隔离。\n` +
+      `- 🔍 **MCP 实时搜索与快捷键**：顶部 Command Bar 增加 MCP 实时名称模糊搜索与快速过滤，支持快捷键 \`Ctrl+F\` 快速聚焦与名称优先级排序。\n` +
+      `- 🔄 **三级 MCP 实时探针与热重载**：\n` +
+      `  - 单服务卡片底部提供刷新探测按钮，触发配置时间戳唤醒并执行 JSON-RPC \`initialize\` + \`tools/list\` 实时探针与耗时检测；\n` +
+      `  - 分组标题栏支持“刷新本组”一键批量并发探测；\n` +
+      `  - 顶部主工具栏提供全局“刷新”按钮，一键从磁盘重新同步全部工作区与全局 MCP 状态。\n` +
+      `- 🛠️ **工具 Schema 实时拉取**：无本地磁盘缓存时提供“立即实时刷新并拉取工具”功能，探针完成后可直接在前端查看实时工具定义。\n` +
+      `- 🎨 **弹窗与交互细节调优**：彻底消除双弹窗重叠问题，悬停详情浮窗完美随昼夜主题自适应变色。\n` +
+      `- 🛡️ **架构防膨胀守卫**：全工程所有核心模块方法均严格收敛在 ≤ 80 行红线内。\n\n` +
+      `### 📦 资产下载\n` +
+      `- \`antigravity-mcp-manager-v${version}-windows11-x64.zip\`：Windows 11 x64 独立绿色版打包文件。\n`,
+    draft: false,
+    prerelease: false
+  };
+}
+
 async function main() {
   const token = getGitCredential();
   if (!token) {
@@ -123,37 +148,26 @@ async function main() {
     process.exit(1);
   }
 
+  const pkgPath = path.resolve(__dirname, '../package.json');
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+  const version = pkg.version || '1.1.0';
+
   const owner = 'liumourenbb';
   const repo = 'antigravity-mcp-manager';
-  const releasePayload = {
-    tag_name: 'v1.0.0',
-    target_commitish: 'main',
-    name: 'Antigravity MCP Manager v1.0.0 (Windows 11 Native Client & Rules Management)',
-    body: '## Antigravity MCP Manager v1.0.0 🚀\n\n' +
-      '首个正式发布版本，原生支持 Windows 11 本地 Electron 桌面客户端、Web 控制台与全局/项目规则管理。\n\n' +
-      '### ✨ 核心特性\n' +
-      '- 🖥️ **Windows 11 独立可执行程序**：内置 `windows11.exe`，免安装即开即用。\n' +
-      '- 📜 **Antigravity 规则管理 (Rules)**：全面支持全局系统规则与工作区专属规则管理，内置规则大纲解析与 24KB 预算监视器。\n' +
-      '- ⚡ **双模驱动**：支持原生 Electron IPC 模式与纯 HTTP 独立服务模式。\n' +
-      '- 🔍 **全空间项目发现**：一键扫描本地 Antigravity 空间与全盘项目 MCP 配置。\n' +
-      '- 📋 **智能多格式粘贴解析**：自动解析 Claude / Cline / RooCode 等任意格式 MCP 配置。\n' +
-      '- 🛠️ **多源环境管理与诊断**：支持环境隔离、停用池沉淀、JetBrains 冗余诊断及配置安全快照备份。\n\n' +
-      '### 📦 资产下载\n' +
-      '- `antigravity-mcp-manager-v1.0.0-windows11-x64.zip`：Windows 11 x64 独立绿色版打包文件。\n',
-    draft: false,
-    prerelease: false
-  };
+  const releasePayload = buildReleasePayload(version);
 
   try {
     const release = await getOrCreateRelease(token, owner, repo, releasePayload);
     console.log(`Release available at: ${release.html_url}`);
 
-    const zipPath = path.resolve(__dirname, '../dist/antigravity-mcp-manager-v1.0.0-windows11-x64.zip');
-    const assetName = 'antigravity-mcp-manager-v1.0.0-windows11-x64.zip';
+    const assetName = `antigravity-mcp-manager-v${version}-windows11-x64.zip`;
+    const zipPath = path.resolve(__dirname, `../dist/${assetName}`);
 
     if (fs.existsSync(zipPath)) {
       await deleteExistingAsset(token, release, assetName);
       uploadAssetWithCurl(token, release.upload_url, zipPath, assetName);
+    } else {
+      console.warn(`Warning: Release zip not found at: ${zipPath}`);
     }
     console.log('\nAll done! Release is live on GitHub.');
   } catch (err) {

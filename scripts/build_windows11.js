@@ -144,6 +144,27 @@ class Launcher {
 }
 
 /**
+ * Compresses the distribution directory into a zip archive for release.
+ */
+function compressDistributionZip(sourceDir, rootPath) {
+  const pkgPath = path.join(rootPath, 'package.json');
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+  const version = pkg.version || '1.1.0';
+  const zipPath = path.join(rootPath, 'dist', `antigravity-mcp-manager-v${version}-windows11-x64.zip`);
+
+  console.log(`[5/5] 打包生成分发压缩包: antigravity-mcp-manager-v${version}-windows11-x64.zip...`);
+  if (fs.existsSync(zipPath)) {
+    try { fs.unlinkSync(zipPath); } catch {}
+  }
+
+  const psCmd = `Compress-Archive -Path "${sourceDir}\\*" -DestinationPath "${zipPath}" -Force`;
+  execSync(`powershell.exe -NoProfile -Command "${psCmd}"`, { stdio: 'inherit' });
+  const zipMb = (fs.statSync(zipPath).size / (1024 * 1024)).toFixed(1);
+  console.log(`[Build] 独立发布压缩包已生成: ${zipPath} (${zipMb} MB)`);
+  return zipPath;
+}
+
+/**
  * Main build process
  */
 function main() {
@@ -157,6 +178,7 @@ function main() {
 
     const distExe = path.join(distDir, 'windows11.exe');
     compileRootLauncher(rootDir, distExe);
+    compressDistributionZip(distDir, rootDir);
 
     const sizeMb = (fs.statSync(distExe).size / (1024 * 1024)).toFixed(1);
     const costSec = ((Date.now() - start) / 1000).toFixed(1);
